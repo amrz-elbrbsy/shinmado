@@ -1,0 +1,168 @@
+@import "tailwindcss";
+
+@theme {
+  --font-display: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-body: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --color-brand-bg: #F5F6F8;
+  --color-brand-surface: #FFFFFF;
+  --color-brand-primary: #0F172A;
+  --color-brand-navy: #111827;
+  --color-brand-blue: #2563EB;
+  --color-brand-blue-light: #EFF6FF;
+  --color-brand-border: #E5E7EB;
+  --color-brand-text-primary: #111827;
+  --color-brand-text-secondary: #64748B;
+}
+
+@layer base {
+  html {
+    font-size: 16px;
+    -webkit-text-size-adjust: 100%;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    color: #111827;
+    background-color: #F5F6F8;
+    line-height: 1.6;
+    letter-spacing: -0.012em;
+  }
+
+  /* Headings with tight, professional letter spacing */
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    letter-spacing: -0.025em;
+    color: #111827;
+  }
+
+  p {
+    line-height: 1.6;
+  }
+}
+
+/* Typography Hierarchy System (Section D) */
+.text-page-title {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: clamp(1.625rem, 1.35rem + 1.25vw, 2.25rem); /* 26px - 36px */
+  line-height: 1.15;
+  letter-spacing: -0.035em;
+  font-weight: 800;
+  color: #111827;
+}
+
+.text-section-title {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: clamp(1.125rem, 1.05rem + 0.5vw, 1.375rem); /* 18px - 22px */
+  line-height: 1.25;
+  letter-spacing: -0.025em;
+  font-weight: 700;
+  color: #111827;
+}
+
+.text-card-title {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 1.05rem; /* 16-17px */
+  line-height: 1.3;
+  letter-spacing: -0.02em;
+  font-weight: 700;
+  color: #111827;
+}
+
+.text-kpi {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: clamp(1.85rem, 1.5rem + 1.5vw, 2.625rem); /* 30px - 42px */
+  line-height: 1.05;
+  letter-spacing: -0.035em;
+  font-weight: 800;
+}
+
+/* Fluid helper classes */
+.text-clamp-hero {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: clamp(1.75rem, 1.25rem + 2.5vw, 2.75rem);
+  line-height: 1.15;
+  letter-spacing: -0.035em;
+  font-weight: 800;
+}
+
+.text-clamp-h1 {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: clamp(1.375rem, 1.1rem + 1.5vw, 2.125rem);
+  line-height: 1.2;
+  letter-spacing: -0.03em;
+  font-weight: 700;
+}
+
+.text-clamp-h2 {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: clamp(1.1875rem, 1.05rem + 0.85vw, 1.625rem);
+  line-height: 1.25;
+  letter-spacing: -0.025em;
+  font-weight: 700;
+}
+
+.text-clamp-h3 {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: clamp(1rem, 0.925rem + 0.45vw, 1.25rem);
+  line-height: 1.35;
+  letter-spacing: -0.02em;
+  font-weight: 600;
+}
+
+.text-clamp-metric {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: clamp(1.75rem, 1.35rem + 2vw, 2.625rem);
+  line-height: 1.1;
+  letter-spacing: -0.035em;
+  font-weight: 800;
+}
+
+.max-w-readable {
+  max-width: 68ch;
+}
+
+/* SaaS Card styles inspired by visual reference */
+.saas-card {
+  background-color: #FFFFFF;
+  border-radius: 1.25rem; /* 20px */
+  border: 1px solid #E5E7EB;
+  box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.04), 0 1px 2px -1px rgba(15, 23, 42, 0.03);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.saas-card-dark {
+  background-color: #0F172A;
+  color: #FFFFFF;
+  border-radius: 1.25rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.3);
+}
+
+.dot-pattern-dark {
+  background-image: radial-gradient(rgba(255, 255, 255, 0.15) 1px, transparent 1px);
+  background-size: 16px 16px;
+}
+
+.dot-pattern-light {
+  background-image: radial-gradient(#CBD5E1 1px, transparent 1px);
+  background-size: 16px 16px;
+}
+
+/* Custom scrollbar for clean enterprise look */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #F1F5F9;
+}
+::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
+}

@@ -1,0 +1,8 @@
+{
+  "name": "ZIPBLIND - PT SHINMADO",
+  "description": "Internal Operations Management System untuk operasional teknisi roller blind PT SHINMADO.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
