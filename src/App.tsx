@@ -23,7 +23,11 @@ import { NotificationsPage } from './components/pages/NotificationsPage';
 import { SettingsPage } from './components/pages/SettingsPage';
 
 const AppContent: React.FC = () => {
-  const { isAuthenticated, activePage } = useApp();
+  const { isAuthenticated, authLoading, activePage } = useApp();
+
+  if (authLoading) {
+    return <div className="min-h-screen bg-[#0B2546] flex items-center justify-center text-white text-sm">Memeriksa sesi...</div>;
+  }
 
   if (!isAuthenticated) {
     return <LoginPage />;

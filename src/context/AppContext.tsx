@@ -60,12 +60,16 @@ export type PageId =
 
 interface AppContextType {
   isAuthenticated: boolean;
+  authLoading: boolean;
   currentUser: AdminUser;
   activePage: PageId;
   navigate: (page: PageId) => void;
   login: (email: string, pass: string, remember: boolean) => Promise<boolean>;
   logout: () => void;
   updateCurrentUser: (data: Partial<AdminUser>) => void;
+  managedUsers: AdminUser[];
+  refreshManagedUsers: () => Promise<void>;
+  createManagedUser: (data: { name: string; email: string; password: string; role: string }) => Promise<boolean>;
 
   // Notifications
   notifications: NotificationItem[];
@@ -247,9 +251,8 @@ function normalizeSurvey(survey: SurveyItem): SurveyItem {
 }
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() =>
-    loadStored<boolean>('auth', true)
-  );
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [authLoading, setAuthLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<AdminUser>(() =>
     loadStored<AdminUser>('user', initialAdminProfile)
   );
@@ -257,6 +260,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     loadStored<PageId>('page', 'dashboard')
   );
   const [globalSearchQuery, setGlobalSearchQuery] = useState<string>('');
+  const [managedUsers, setManagedUsers] = useState<AdminUser[]>([]);
 
   const [technicians, setTechnicians] = useState<Technician[]>(() =>
     loadStored<Technician[]>('technicians', initialTechnicians)
@@ -327,6 +331,39 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     refreshSupabaseConnection();
 
+    let mounted = true;
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!mounted) return;
+      setIsAuthenticated(Boolean(session));
+      if (session?.user) {
+        setCurrentUser((previous) => ({
+          ...previous,
+          id: session.user.id,
+          email: session.user.email || previous.email,
+          name: session.user.user_metadata?.name || previous.name,
+          role: session.user.user_metadata?.role || previous.role,
+        }));
+      }
+      setAuthLoading(false);
+    });
+
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setIsAuthenticated(Boolean(session));
+      if (!session) {
+        setCurrentUser(initialAdminProfile);
+        setActivePage('dashboard');
+      } else {
+        setCurrentUser((previous) => ({
+          ...previous,
+          id: session.user.id,
+          email: session.user.email || previous.email,
+          name: session.user.user_metadata?.name || previous.name,
+          role: session.user.user_metadata?.role || previous.role,
+        }));
+      }
+      setAuthLoading(false);
+    });
+
     // Setup Supabase Realtime Listener
     try {
       const channel = supabase
@@ -337,6 +374,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         .subscribe();
 
       return () => {
+        mounted = false;
+        authListener.subscription.unsubscribe();
         supabase.removeChannel(channel);
       };
     } catch (e) {
@@ -397,28 +436,57 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const login = async (email: string, pass: string, remember: boolean): Promise<boolean> => {
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    if (email.trim() && pass.trim()) {
-      setIsAuthenticated(true);
-      setCurrentUser({
-        id: 'ADM-01',
-        name: 'Muhammad Amrizal',
-        email,
-        role: 'Administrator',
-      });
-      showToast('Login Berhasil', 'Selamat datang di ZIPBLIND PT SHINMADO.', 'success');
-      return true;
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: email.trim(),
+      password: pass,
+    });
+    if (error || !data.session) {
+      return false;
     }
-    return false;
+    setIsAuthenticated(true);
+    showToast('Login Berhasil', `Selamat datang, ${data.user.user_metadata?.name || email}.`, 'success');
+    return true;
   };
 
-  const logout = () => {
+  const logout = async () => {
+    await supabase.auth.signOut();
     setIsAuthenticated(false);
+    setCurrentUser(initialAdminProfile);
     showToast('Logout Berhasil', 'Sesi Anda telah diakhiri dengan aman.', 'info');
   };
 
   const updateCurrentUser = (data: Partial<AdminUser>) => {
     setCurrentUser((prev) => ({ ...prev, ...data }));
+  };
+
+  const refreshManagedUsers = async () => {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id, name, email, role_id, phone, avatar_url')
+      .order('name');
+    if (!error && data) {
+      setManagedUsers(data.map((profile) => ({
+        id: profile.id,
+        name: profile.name,
+        email: profile.email,
+        role: profile.role_id,
+        phone: profile.phone || undefined,
+        avatarUrl: profile.avatar_url || undefined,
+      })));
+    }
+  };
+
+  const createManagedUser = async (data: { name: string; email: string; password: string; role: string }) => {
+    const { error } = await supabase.functions.invoke('admin-create-user', {
+      body: data,
+    });
+    if (error) {
+      showToast('User Gagal Dibuat', error.message, 'error');
+      return false;
+    }
+    await refreshManagedUsers();
+    showToast('User Berhasil Dibuat', `${data.email} dapat login melalui Supabase Auth.`, 'success');
+    return true;
   };
 
   // Notifications
@@ -959,12 +1027,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     <AppContext.Provider
       value={{
         isAuthenticated,
+        authLoading,
         currentUser,
         activePage,
         navigate,
         login,
         logout,
         updateCurrentUser,
+        managedUsers,
+        refreshManagedUsers,
+        createManagedUser,
         notifications,
         unreadNotificationCount,
         markNotificationAsRead,

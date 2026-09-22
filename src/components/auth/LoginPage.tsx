@@ -51,17 +51,15 @@ export const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center p-3 sm:p-6 lg:p-10 bg-gradient-to-br from-[#B9D7F7] via-[#D2E6FC] to-[#EDF5FD] relative overflow-hidden">
+    <div className="min-h-screen w-full flex items-center justify-center p-3 sm:p-6 lg:p-10 bg-[#0B2546] relative overflow-hidden">
       {/* Dreamy soft cloud background accents */}
-      <div className="absolute -top-24 -left-24 w-96 h-96 bg-white/40 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute top-1/3 -right-20 w-80 h-80 bg-white/50 rounded-full blur-2xl pointer-events-none" />
-      <div className="absolute -bottom-20 left-1/4 w-[500px] h-60 bg-white/60 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute inset-0 opacity-30 dot-pattern-dark pointer-events-none" />
 
       {/* Main floating card container */}
-      <div className="relative z-10 w-full max-w-5xl bg-white rounded-[28px] sm:rounded-[36px] shadow-[0_20px_60px_-15px_rgba(59,130,246,0.18)] border border-white/90 p-3.5 sm:p-5 lg:p-6 flex flex-col lg:flex-row items-stretch gap-6 lg:gap-8">
+      <div className="relative z-10 w-full max-w-5xl bg-white rounded-2xl shadow-[0_24px_80px_rgba(0,0,0,0.25)] border border-white/20 p-3.5 sm:p-5 lg:p-6 flex flex-col lg:flex-row items-stretch gap-6 lg:gap-8">
         
         {/* LEFT COLUMN: Cute Cartoon Mascot Visual */}
-        <div className="lg:w-1/2 relative rounded-[22px] sm:rounded-[28px] overflow-hidden bg-[#E2EEFC] aspect-square sm:aspect-[4/3] lg:aspect-auto lg:min-h-[560px] flex items-end group shadow-inner">
+        <div className="lg:w-1/2 relative rounded-xl overflow-hidden bg-[#E2EEFC] aspect-square sm:aspect-[4/3] lg:aspect-auto lg:min-h-[560px] flex items-end group shadow-inner">
           {/* 3D Cute Yeti Mascot Image */}
           <img
             src={cuteYetiMascot}
