@@ -26,7 +26,7 @@ import { useApp } from '../../context/AppContext';
 import { Installation } from '../../types';
 
 export const InstallationsPage: React.FC = () => {
-  const { installations, technicians, addInstallation, updateInstallation, deleteInstallation, showToast } = useApp();
+  const { installations, schedules, technicians, addInstallation, updateInstallation, deleteInstallation, showToast, navigate } = useApp();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
@@ -43,25 +43,26 @@ export const InstallationsPage: React.FC = () => {
   const [projectName, setProjectName] = useState('');
   const [customerName, setCustomerName] = useState('');
   const [location, setLocation] = useState('');
-  const [technicianName, setTechnicianName] = useState(technicians[0]?.name || 'Dimas');
-  const [teamMembers, setTeamMembers] = useState('Fajar, Rehan');
-  const [startDate, setStartDate] = useState('2026-09-20');
-  const [endDate, setEndDate] = useState('2026-09-24');
-  const [totalSets, setTotalSets] = useState(18);
-  const [completedSets, setCompletedSets] = useState(12);
+  const [technicianName, setTechnicianName] = useState(technicians[0]?.name || '');
+  const [teamMembers, setTeamMembers] = useState('');
+  const [startDate, setStartDate] = useState(new Date().toISOString().slice(0, 10));
+  const [endDate, setEndDate] = useState('');
+  const [totalSets, setTotalSets] = useState(0);
+  const [completedSets, setCompletedSets] = useState(0);
   const [status, setStatus] = useState<Installation['status']>('Dalam Proses');
   const [notes, setNotes] = useState('');
+  const getInstallationSchedule = (installation: Installation) => schedules.find((schedule) => schedule.installationId === installation.id);
 
   const openAddModal = () => {
     setEditingInstallId(null);
     setProjectName('');
     setCustomerName('');
     setLocation('');
-    setTechnicianName(technicians[0]?.name || 'Dimas');
-    setTeamMembers('Fajar');
-    setStartDate('2026-09-20');
-    setEndDate('2026-09-22');
-    setTotalSets(10);
+    setTechnicianName(technicians[0]?.name || '');
+    setTeamMembers('');
+    setStartDate(new Date().toISOString().slice(0, 10));
+    setEndDate('');
+    setTotalSets(0);
     setCompletedSets(0);
     setStatus('Dalam Proses');
     setNotes('');
@@ -315,7 +316,9 @@ export const InstallationsPage: React.FC = () => {
                 <div className="flex items-center gap-1.5 text-slate-600">
                   <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                   <span>
-                    {item.startDate} — {item.endDate}
+                    {getInstallationSchedule(item)
+                      ? `${getInstallationSchedule(item)?.date} pukul ${getInstallationSchedule(item)?.time}`
+                      : 'Belum dijadwalkan melalui Kalender Jadwal'}
                   </span>
                 </div>
 
@@ -531,25 +534,20 @@ export const InstallationsPage: React.FC = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Tanggal Mulai</label>
-                  <input
-                    type="date"
-                    value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                    className="w-full text-xs rounded-xl border border-slate-300 p-2.5 focus:ring-2 focus:ring-[#B88710]/20 focus:border-[#B88710] outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Target Selesai</label>
-                  <input
-                    type="date"
-                    value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
-                    className="w-full text-xs rounded-xl border border-slate-300 p-2.5 focus:ring-2 focus:ring-[#B88710]/20 focus:border-[#B88710] outline-none"
-                  />
-                </div>
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs">
+                <span className="block text-slate-400">Informasi Jadwal</span>
+                <p className="font-semibold text-slate-700">
+                  {(() => {
+                    const installation = installations.find((item) => item.id === editingInstallId);
+                    const schedule = installation ? getInstallationSchedule(installation) : undefined;
+                    return schedule
+                      ? `${schedule.date} - ${schedule.time} (${schedule.status})`
+                      : 'Belum dijadwalkan';
+                  })()}
+                </p>
+                <button type="button" onClick={() => navigate('jadwal')} className="mt-1 text-[#8C6207] font-bold hover:underline">
+                  Buka Kalender Jadwal
+                </button>
               </div>
 
               <div className="grid grid-cols-2 gap-3">

@@ -36,12 +36,12 @@ export const TargetsPage: React.FC = () => {
 
   // Form State
   const [formData, setFormData] = useState({
-    technicianId: 'TKN-001',
-    technicianName: 'Arwan',
-    periodStart: '2026-09-18',
-    periodEnd: '2026-09-20',
-    targetSets: 30,
-    actualSets: 24,
+    technicianId: '',
+    technicianName: '',
+    periodStart: new Date().toISOString().slice(0, 10),
+    periodEnd: new Date().toISOString().slice(0, 10),
+    targetSets: 0,
+    actualSets: 0,
     status: 'Berjalan' as TargetStatus,
   });
 
@@ -54,11 +54,11 @@ export const TargetsPage: React.FC = () => {
   const handleOpenAdd = () => {
     setEditingTarget(null);
     setFormData({
-      technicianId: technicians[0]?.id || 'TKN-001',
-      technicianName: technicians[0]?.name || 'Arwan',
-      periodStart: '2026-09-18',
-      periodEnd: '2026-09-20',
-      targetSets: 30,
+      technicianId: technicians[0]?.id || '',
+      technicianName: technicians[0]?.name || '',
+      periodStart: new Date().toISOString().slice(0, 10),
+      periodEnd: new Date().toISOString().slice(0, 10),
+      targetSets: 0,
       actualSets: 0,
       status: 'Berjalan',
     });

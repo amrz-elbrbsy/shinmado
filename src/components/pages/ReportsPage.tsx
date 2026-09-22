@@ -16,111 +16,206 @@ import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
 import { useApp } from '../../context/AppContext';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import * as XLSX from 'xlsx';
+import logoUrl from '../../assets/images/zipblind_logo_transparent.png';
 
 export const ReportsPage: React.FC = () => {
-  const { technicians, showToast, navigate } = useApp();
+  const { technicians, schedules, installations, targets, materials, showToast, navigate } = useApp();
 
-  const [period, setPeriod] = useState('Bulan Ini (September 2026)');
+  const getLocalDateKey = (date = new Date()) =>
+    `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  const today = new Date();
+  const todayKey = getLocalDateKey(today);
+  const monthLabel = today.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
+  const [period, setPeriod] = useState('month');
   const [selectedTech, setSelectedTech] = useState('all');
   const [reportType, setReportType] = useState('Pemasangan');
+  const [isExporting, setIsExporting] = useState(false);
 
-  // Summary Metrics (Stage 10 requirements: Total Pekerjaan: 48, Total Set Terpasang: 180 Set, Rata-rata Rating: 4.8 / 5, Penggunaan Material: 240 Meter Kain)
+  const completedInstallations = installations.filter((item) => item.status === 'Selesai');
+  const totalJobs = schedules.length + installations.length;
+  const totalSetsInstalled = installations.reduce((sum, item) => sum + item.completedSets, 0);
+  const totalMaterialStock = materials.reduce((sum, item) => sum + item.stock, 0);
+
   const metrics = [
     {
       label: 'Total Pekerjaan',
-      value: '48',
+      value: String(totalJobs),
       sub: 'Survey & Instalasi',
       icon: <CheckCircle2 className="w-4 h-4 text-[#B88710]" />,
       bg: 'bg-[#FAF2DF] text-[#8C6207]',
     },
     {
       label: 'Total Set Terpasang',
-      value: '180 Set',
+      value: `${totalSetsInstalled} Set`,
       sub: 'Pencapaian target tim',
       icon: <TrendingUp className="w-4 h-4 text-emerald-600" />,
       bg: 'bg-emerald-50 text-emerald-700',
     },
     {
       label: 'Rata-rata Rating',
-      value: '4.8 / 5',
-      sub: 'Kepuasan customer',
+      value: '0 / 5',
+      sub: 'Belum ada data rating',
       icon: <Star className="w-4 h-4 text-amber-500 fill-amber-400" />,
       bg: 'bg-amber-50 text-amber-700',
     },
     {
       label: 'Penggunaan Material',
-      value: '240 Meter',
+      value: `${totalMaterialStock} Meter`,
       sub: 'Total kain terpasang',
       icon: <Boxes className="w-4 h-4 text-[#B88710]" />,
       bg: 'bg-[#FAF2DF] text-[#8C6207]',
     },
   ];
 
-  // Realistic Operational Report Summary Rows
   const reportRows = [
-    {
-      id: 'REP-01',
-      date: '18 Sep 2026',
-      technician: 'Arwan',
-      customer: 'PT Multidaya Prima (Sudirman)',
+    ...completedInstallations.map((installation) => ({
+      id: installation.id,
+      date: installation.startDate,
+      technician: installation.technicianName,
+      customer: installation.customerName,
       type: 'Pemasangan',
-      sets: 14,
-      fabricUsed: '32 Meter (Dimout Grey)',
-      rating: 5.0,
-      status: 'Selesai',
-    },
-    {
-      id: 'REP-02',
-      date: '18 Sep 2026',
-      technician: 'Rehan',
-      customer: 'Keluarga Bpk. Hendra (Puri Indah)',
-      type: 'Pemasangan',
-      sets: 12,
-      fabricUsed: '28 Meter (Blackout White)',
-      rating: 4.9,
-      status: 'Selesai',
-    },
-    {
-      id: 'REP-03',
-      date: '17 Sep 2026',
-      technician: 'Asep',
-      customer: 'Wisma Mandiri Lt. 12',
-      type: 'Pemasangan',
-      sets: 18,
-      fabricUsed: '45 Meter (Solar Screen 3%)',
-      rating: 4.8,
-      status: 'Selesai',
-    },
-    {
-      id: 'REP-04',
-      date: '17 Sep 2026',
-      technician: 'Fajar',
-      customer: 'Resto Kayu Manis BSD',
-      type: 'Pemasangan',
-      sets: 8,
-      fabricUsed: '20 Meter (Dimout Beige)',
-      rating: 4.7,
-      status: 'Selesai',
-    },
-    {
-      id: 'REP-05',
-      date: '16 Sep 2026',
-      technician: 'Arwan',
-      customer: 'Kantor Notaris Siska SH',
-      type: 'Survey & Pengukuran',
-      sets: 6,
-      fabricUsed: 'Survey Akurasi Laser',
-      rating: 5.0,
-      status: 'Selesai',
-    },
+      sets: installation.completedSets,
+      fabricUsed: '-',
+      rating: 0,
+      status: installation.status,
+    })),
+    ...schedules.map((schedule) => ({
+      id: schedule.id,
+      date: schedule.date,
+      technician: schedule.technicianName,
+      customer: schedule.customerName,
+      type: schedule.type,
+      sets: schedule.setsCount || 0,
+      fabricUsed: '-',
+      rating: 0,
+      status: schedule.status,
+    })),
   ];
 
-  const handleExport = (format: 'PDF' | 'Excel') => {
-    showToast(
-      `Export ${format} Berhasil`,
-      `Laporan operasional teknisi periode ${period} telah siap diunduh.`,
-      'success'
-    );
+  const periodLabels: Record<string, string> = {
+    today: `Hari Ini (${todayKey})`,
+    week: 'Minggu Ini',
+    month: `Bulan Ini (${monthLabel})`,
+    quarter: `Kuartal ${Math.floor(today.getMonth() / 3) + 1} (${today.getFullYear()})`,
+  };
+  const getPeriodStart = () => {
+    const start = new Date(today);
+    if (period === 'today') return todayKey;
+    if (period === 'week') {
+      start.setDate(today.getDate() - today.getDay());
+    } else if (period === 'month') {
+      start.setDate(1);
+    } else {
+      start.setMonth(Math.floor(today.getMonth() / 3) * 3, 1);
+    }
+    return getLocalDateKey(start);
+  };
+  const periodStart = getPeriodStart();
+  const materialReportRows = materials.map((material) => ({
+    id: material.id,
+    date: material.lastRestocked || todayKey,
+    technician: '-',
+    customer: material.name,
+    type: 'Pemakaian Material',
+    sets: material.stock,
+    fabricUsed: `${material.stock} ${material.unit}`,
+    rating: 0,
+    status: material.status,
+  }));
+  const rowsForSelectedReport = reportType === 'Pemakaian Material' ? materialReportRows : reportRows;
+  const filteredReportRows = rowsForSelectedReport.filter((row) => {
+    if (row.date < periodStart || row.date > todayKey) return false;
+    if (selectedTech !== 'all' && row.technician !== selectedTech) return false;
+    if (reportType === 'Pemasangan' && row.type !== 'Pemasangan') return false;
+    if (reportType === 'Survey' && row.type !== 'Survey') return false;
+    return true;
+  });
+
+  const formatDateTime = () => new Intl.DateTimeFormat('id-ID', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(new Date());
+
+  const downloadLogo = async () => {
+    const response = await fetch(logoUrl);
+    const blob = await response.blob();
+    return await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(String(reader.result));
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  };
+
+  const handleExport = async (format: 'PDF' | 'Excel') => {
+    if (filteredReportRows.length === 0) {
+      showToast('Export Tidak Tersedia', 'Tidak ada data pada filter laporan yang dipilih.', 'warning');
+      return;
+    }
+    setIsExporting(true);
+    try {
+      const filename = `Laporan_ZIPLIND_${todayKey}`;
+      const filterLabel = `${periodLabels[period]} | Teknisi: ${selectedTech === 'all' ? 'Semua' : selectedTech} | Jenis: ${reportType}`;
+      const rows = filteredReportRows.map((row) => [
+        row.date, row.technician, row.customer, row.type, row.sets, row.fabricUsed, row.rating, row.status,
+      ]);
+
+      if (format === 'Excel') {
+        const worksheet = XLSX.utils.aoa_to_sheet([
+          ['Laporan Operasional ZIPLIND'],
+          ['Periode', periodLabels[period]],
+          ['Filter', filterLabel],
+          ['Dibuat', formatDateTime()],
+          [],
+          ['Tanggal', 'Teknisi', 'Customer / Lokasi', 'Pekerjaan', 'Output Set', 'Material Terpakai', 'Rating', 'Status'],
+          ...rows,
+        ]);
+        worksheet['!cols'] = [14, 20, 30, 20, 14, 22, 12, 16].map((wch) => ({ wch }));
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'Laporan');
+        XLSX.writeFile(workbook, `${filename}.xlsx`);
+      } else {
+        const pdf = new jsPDF({ orientation: 'landscape' });
+        try {
+          const logo = await downloadLogo();
+          pdf.addImage(logo, 'PNG', 14, 10, 32, 10);
+        } catch {
+          // Export remains usable if the optional logo asset cannot be loaded.
+        }
+        pdf.setTextColor(11, 37, 70);
+        pdf.setFontSize(16);
+        pdf.text('Laporan Operasional ZIPLIND', 52, 17);
+        pdf.setFontSize(9);
+        pdf.setTextColor(80, 80, 80);
+        pdf.text(`Periode: ${periodLabels[period]}`, 14, 30);
+        pdf.text(`Filter: ${filterLabel}`, 14, 36);
+        pdf.text(`Dibuat: ${formatDateTime()}`, 14, 42);
+        autoTable(pdf, {
+          startY: 48,
+          head: [['Tanggal', 'Teknisi', 'Customer / Lokasi', 'Pekerjaan', 'Output Set', 'Material Terpakai', 'Rating', 'Status']],
+          body: rows,
+          theme: 'grid',
+          headStyles: { fillColor: [184, 135, 16] },
+          styles: { fontSize: 8, cellPadding: 2.5 },
+          didDrawPage: (data) => {
+            pdf.setFontSize(8);
+            pdf.setTextColor(100, 100, 100);
+            pdf.text('PT SHINMADO', 14, pdf.internal.pageSize.height - 8);
+            pdf.text(`Halaman ${data.pageNumber}`, pdf.internal.pageSize.width - 32, pdf.internal.pageSize.height - 8);
+          },
+        });
+        pdf.save(`${filename}.pdf`);
+      }
+      showToast(`Export ${format} Berhasil`, `${filteredReportRows.length} data berhasil diekspor.`, 'success');
+    } catch (error) {
+      console.error(`Export ${format} gagal`, error);
+      showToast(`Export ${format} Gagal`, 'Terjadi kesalahan saat membuat file laporan.', 'error');
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   return (
@@ -143,17 +238,19 @@ export const ReportsPage: React.FC = () => {
             variant="outline"
             leftIcon={<Download className="w-4 h-4 text-emerald-600" />}
             onClick={() => handleExport('Excel')}
+            disabled={isExporting}
             className="font-bold text-xs border-slate-200 hover:bg-slate-50"
           >
-            Export Excel
+            {isExporting ? 'Menyiapkan...' : 'Export Excel'}
           </Button>
           <Button
             variant="primary"
             leftIcon={<Printer className="w-4 h-4" />}
             onClick={() => handleExport('PDF')}
+            disabled={isExporting}
             className="font-bold text-xs shadow-xs"
           >
-            Export PDF
+            {isExporting ? 'Menyiapkan...' : 'Export PDF'}
           </Button>
         </div>
       </div>
@@ -191,10 +288,10 @@ export const ReportsPage: React.FC = () => {
               onChange={(e) => setPeriod(e.target.value)}
               className="w-full text-xs font-semibold bg-slate-50 rounded-xl border border-slate-200 px-3 py-2 focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#B88710]/20 focus:border-[#B88710] cursor-pointer"
             >
-              <option value="Hari Ini (18 Sep 2026)">Hari Ini (18 Sep 2026)</option>
-              <option value="Minggu Ini (14 - 20 Sep 2026)">Minggu Ini (14 - 20 Sep 2026)</option>
-              <option value="Bulan Ini (September 2026)">Bulan Ini (September 2026)</option>
-              <option value="Kuartal 3 (Juli - Sep 2026)">Kuartal 3 (Juli - Sep 2026)</option>
+              <option value="today">{periodLabels.today}</option>
+              <option value="week">{periodLabels.week}</option>
+              <option value="month">{periodLabels.month}</option>
+              <option value="quarter">{periodLabels.quarter}</option>
             </select>
           </div>
 
@@ -238,10 +335,10 @@ export const ReportsPage: React.FC = () => {
         <div className="p-4 border-b border-slate-100 flex items-center justify-between">
           <div>
             <h3 className="text-sm font-bold text-slate-900">Rekapitulasi Operasional Lapangan</h3>
-            <p className="text-xs text-slate-400 mt-0.5">Rincian pekerjaan teknisi periode {period}</p>
+            <p className="text-xs text-slate-400 mt-0.5">Rincian pekerjaan teknisi periode {periodLabels[period]}</p>
           </div>
           <span className="text-xs font-semibold text-[#8C6207] bg-[#FAF2DF] border border-[#F2E0B5] px-2.5 py-1 rounded-full">
-            {reportRows.length} Catatan Laporan
+            {filteredReportRows.length} Catatan Laporan
           </span>
         </div>
         <div className="overflow-x-auto">
@@ -258,7 +355,11 @@ export const ReportsPage: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-xs text-slate-700">
-              {reportRows.map((row) => (
+              {filteredReportRows.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="py-12 text-center text-slate-400">Tidak ada data pada filter laporan ini.</td>
+                </tr>
+              ) : filteredReportRows.map((row) => (
                 <tr key={row.id} className="hover:bg-slate-50/80 transition-colors">
                   <td className="py-3.5 px-6 font-mono text-[11px] text-slate-600">{row.date}</td>
                   <td className="py-3.5 px-6 font-bold text-slate-900">{row.technician}</td>

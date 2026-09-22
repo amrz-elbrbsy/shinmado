@@ -21,6 +21,8 @@ export interface Technician {
 
 export interface Schedule {
   id: string;
+  surveyId?: string;
+  installationId?: string;
   date: string; // YYYY-MM-DD
   time: string; // HH:mm
   type: JobType;
@@ -48,11 +50,14 @@ export interface SurveyMeasurement {
 
 export interface SurveyItem {
   id: string;
+  scheduleId?: string;
   customerName: string;
   location: string;
   sales: string;
   technicianId: string;
   technicianName: string;
+  technicianIds?: string[];
+  technicianNames?: string[];
   assistantTechnicianName?: string;
   date: string;
   time: string;
@@ -72,6 +77,7 @@ export interface InstallationDailyProgress {
 
 export interface Installation {
   id: string;
+  scheduleId?: string;
   projectName: string;
   customerName: string;
   location: string;
@@ -124,18 +130,37 @@ export interface Equipment {
   currentBorrowerId?: string;
   lastMaintained?: string;
   notes?: string;
+  units?: EquipmentUnit[];
+  unitCount?: number;
+}
+
+export interface EquipmentUnit {
+  id: string;
+  equipmentId: string;
+  code: string;
+  status: EquipmentStatus;
+  condition: EquipmentCondition;
+  serialNumber?: string;
+  currentBorrower?: string;
+  currentBorrowerId?: string;
+  lastBorrowDate?: string;
+  lastReturnDate?: string;
 }
 
 export interface EquipmentLoan {
   id: string; // e.g. "L-001"
   equipmentId: string;
+  unitId?: string;
+  unitCode?: string;
   equipmentCode?: string;
   equipmentName: string;
   borrowerName: string;
   technicianId: string;
   borrowDate: string;
+  borrowedAt?: string;
   estimatedReturnDate: string;
   actualReturnDate?: string | null;
+  returnedAt?: string | null;
   status: LoanStatus;
   returnCondition?: EquipmentCondition;
   notes?: string;
