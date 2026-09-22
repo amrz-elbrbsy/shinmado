@@ -97,30 +97,27 @@ export const MaterialsPage: React.FC = () => {
     return 'Aman';
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name.trim()) return;
 
     const autoStatus = calculateStatus(formData.stock, formData.minStock);
 
-    if (editingMaterial) {
-      updateMaterial(editingMaterial.id, {
+    const saved = editingMaterial
+      ? await updateMaterial(editingMaterial.id, {
         ...formData,
         status: autoStatus,
-      });
-    } else {
-      addMaterial({
+        })
+      : await addMaterial({
         ...formData,
         status: autoStatus,
-      });
-    }
-    setIsAddDrawerOpen(false);
+        });
+    if (saved) setIsAddDrawerOpen(false);
   };
 
-  const handleDeleteConfirm = () => {
+  const handleDeleteConfirm = async () => {
     if (deletingMaterial) {
-      deleteMaterial(deletingMaterial.id);
-      setDeletingMaterial(null);
+      if (await deleteMaterial(deletingMaterial.id)) setDeletingMaterial(null);
     }
   };
 

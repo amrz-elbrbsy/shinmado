@@ -197,18 +197,16 @@ export const SchedulePage: React.FC = () => {
     setIsAddModalOpen(true);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.customerName || !formData.location) return;
     if (!editingSchedule && formData.type === 'Survey' && !formData.surveyId) return;
     if (!editingSchedule && formData.type === 'Pemasangan' && !formData.installationId) return;
 
-    if (editingSchedule) {
-      updateSchedule(editingSchedule.id, formData);
-    } else {
-      addSchedule(formData);
-    }
-    setIsAddModalOpen(false);
+    const saved = editingSchedule
+      ? await updateSchedule(editingSchedule.id, formData)
+      : await addSchedule(formData);
+    if (saved) setIsAddModalOpen(false);
   };
 
   const availableSurveys = surveys.filter((survey) => {
@@ -251,11 +249,12 @@ export const SchedulePage: React.FC = () => {
     }));
   };
 
-  const handleDeleteConfirm = () => {
+  const handleDeleteConfirm = async () => {
     if (deletingSchedule) {
-      deleteSchedule(deletingSchedule.id);
-      setDeletingSchedule(null);
-      setViewingSchedule(null);
+      if (await deleteSchedule(deletingSchedule.id)) {
+        setDeletingSchedule(null);
+        setViewingSchedule(null);
+      }
     }
   };
 

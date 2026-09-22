@@ -85,11 +85,11 @@ export const LoansPage: React.FC = () => {
     setIsBorrowDrawerOpen(true);
   };
 
-  const handleBorrowSubmit = (e: React.FormEvent) => {
+  const handleBorrowSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!borrowForm.equipmentId || !borrowForm.borrowerName) return;
 
-    const created = addLoan({
+    const created = await addLoan({
       equipmentId: borrowForm.equipmentId,
       unitId: borrowForm.unitId,
       unitCode: equipment.find((item) => item.id === borrowForm.equipmentId)?.units?.find((unit) => unit.id === borrowForm.unitId)?.code,
@@ -115,18 +115,18 @@ export const LoansPage: React.FC = () => {
     });
   };
 
-  const handleReturnSubmit = (e: React.FormEvent) => {
+  const handleReturnSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!returningLoan) return;
 
-    returnLoan(
+    const returned = await returnLoan(
       returningLoan.id,
       returnForm.returnDate,
       returnForm.returnCondition,
       returnForm.notes
     );
 
-    setReturningLoan(null);
+    if (returned) setReturningLoan(null);
   };
 
   return (

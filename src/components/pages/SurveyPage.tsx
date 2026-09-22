@@ -152,7 +152,7 @@ export const SurveyPage: React.FC = () => {
     );
   };
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!customerName || !location) {
       showToast('Harap lengkapi nama pelanggan dan alamat', undefined, 'error');
@@ -165,8 +165,8 @@ export const SurveyPage: React.FC = () => {
     }
     const technicianNames = selectedTechnicians.map((technician) => technician.name);
 
-    if (editingSurveyId) {
-      updateSurvey(editingSurveyId, {
+    const saved = editingSurveyId
+      ? await updateSurvey(editingSurveyId, {
         customerName,
         location,
         sales,
@@ -178,9 +178,8 @@ export const SurveyPage: React.FC = () => {
         status,
         notes,
         measurements,
-      });
-    } else {
-      addSurvey({
+        })
+      : await addSurvey({
         customerName,
         location,
         sales,
@@ -195,10 +194,9 @@ export const SurveyPage: React.FC = () => {
         notes,
         measurements,
         hasDocumentation: true,
-      });
-    }
+        });
 
-    setIsModalOpen(false);
+    if (saved) setIsModalOpen(false);
   };
 
   const filteredSurveys = surveys.filter((s) => {

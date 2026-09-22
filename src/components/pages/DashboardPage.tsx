@@ -107,10 +107,10 @@ export const DashboardPage: React.FC = () => {
   // Primary multi-day project highlight from current application data.
   const highlightedProject = installations.find((i) => i.status === 'Dalam Proses') || installations[0];
 
-  const handleCreateSurvey = (e: React.FormEvent) => {
+  const handleCreateSurvey = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!surveyCustomer || !surveyLocation) return;
-    addSurvey({
+    const saved = await addSurvey({
       customerName: surveyCustomer,
       location: surveyLocation,
       sales: surveySales,
@@ -122,15 +122,17 @@ export const DashboardPage: React.FC = () => {
       notes: 'Survey diagendakan dari Dashboard quick action.',
       measurements: [],
     });
-    setIsSurveyModalOpen(false);
-    setSurveyCustomer('');
-    setSurveyLocation('');
+    if (saved) {
+      setIsSurveyModalOpen(false);
+      setSurveyCustomer('');
+      setSurveyLocation('');
+    }
   };
 
-  const handleCreateInstallation = (e: React.FormEvent) => {
+  const handleCreateInstallation = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!installProject || !installLocation) return;
-    addInstallation({
+    const saved = await addInstallation({
       projectName: installProject,
       customerName: installCustomer || installProject,
       location: installLocation,
@@ -144,9 +146,11 @@ export const DashboardPage: React.FC = () => {
       status: 'Dalam Proses',
       notes: 'Instalasi dijadwalkan dari Dashboard quick action.',
     });
-    setIsInstallModalOpen(false);
-    setInstallProject('');
-    setInstallLocation('');
+    if (saved) {
+      setIsInstallModalOpen(false);
+      setInstallProject('');
+      setInstallLocation('');
+    }
   };
 
   return (

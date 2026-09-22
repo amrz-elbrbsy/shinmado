@@ -88,22 +88,19 @@ export const MaintenancePage: React.FC = () => {
     setIsAddDrawerOpen(true);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.equipmentId || !formData.maintenanceType) return;
 
-    if (editingRecord) {
-      updateMaintenanceRecord(editingRecord.id, formData);
-    } else {
-      addMaintenanceRecord(formData);
-    }
-    setIsAddDrawerOpen(false);
+    const saved = editingRecord
+      ? await updateMaintenanceRecord(editingRecord.id, formData)
+      : await addMaintenanceRecord(formData);
+    if (saved) setIsAddDrawerOpen(false);
   };
 
-  const handleDeleteConfirm = () => {
+  const handleDeleteConfirm = async () => {
     if (deletingRecord) {
-      deleteMaintenanceRecord(deletingRecord.id);
-      setDeletingRecord(null);
+      if (await deleteMaintenanceRecord(deletingRecord.id)) setDeletingRecord(null);
     }
   };
 

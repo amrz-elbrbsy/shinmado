@@ -79,22 +79,20 @@ export const TargetsPage: React.FC = () => {
     setIsAddDrawerOpen(true);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (editingTarget) {
-      updateTarget(editingTarget.id, formData);
-    } else {
-      addTarget(formData);
-    }
-    setIsAddDrawerOpen(false);
+    const saved = editingTarget
+      ? await updateTarget(editingTarget.id, formData)
+      : await addTarget(formData);
+    if (saved) setIsAddDrawerOpen(false);
   };
 
-  const handleDeleteConfirm = () => {
+  const handleDeleteConfirm = async () => {
     if (deletingTarget) {
-      deleteTarget(deletingTarget.id);
-      if (selectedTarget?.id === deletingTarget.id) {
+      if (await deleteTarget(deletingTarget.id) && selectedTarget?.id === deletingTarget.id) {
         setSelectedTarget(targets.find((t) => t.id !== deletingTarget.id) || null);
       }
+      if (!deletingTarget) return;
       setDeletingTarget(null);
     }
   };
