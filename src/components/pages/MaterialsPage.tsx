@@ -43,9 +43,9 @@ export const MaterialsPage: React.FC = () => {
   }>({
     name: '',
     category: 'Kain Blind',
-    stock: 20,
+    stock: 0,
     unit: 'Meter',
-    minStock: 10,
+    minStock: 0,
     notes: '',
   });
 
@@ -70,9 +70,9 @@ export const MaterialsPage: React.FC = () => {
     setFormData({
       name: '',
       category: 'Kain Blind',
-      stock: 20,
+      stock: 0,
       unit: 'Meter',
-      minStock: 10,
+      minStock: 0,
       notes: '',
     });
     setIsAddDrawerOpen(true);

@@ -22,7 +22,7 @@ import { useApp } from '../../context/AppContext';
 import { SurveyItem, SurveyMeasurement, ScheduleStatus } from '../../types';
 
 export const SurveyPage: React.FC = () => {
-  const { surveys, technicians, addSurvey, updateSurvey, deleteSurvey, showToast } = useApp();
+  const { surveys, schedules, technicians, addSurvey, updateSurvey, deleteSurvey, showToast, navigate } = useApp();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
@@ -35,11 +35,13 @@ export const SurveyPage: React.FC = () => {
   // Form State
   const [customerName, setCustomerName] = useState('');
   const [location, setLocation] = useState('');
-  const [sales, setSales] = useState('Rian');
-  const [technicianName, setTechnicianName] = useState(technicians[0]?.name || 'Dimas');
-  const [assistantTechnicianName, setAssistantTechnicianName] = useState('Arwan');
-  const [date, setDate] = useState('2026-09-20');
-  const [time, setTime] = useState('09:00');
+  const [sales, setSales] = useState('');
+  const [technicianName, setTechnicianName] = useState(technicians[0]?.name || '');
+  const [selectedTechnicianIds, setSelectedTechnicianIds] = useState<string[]>(
+    technicians[0]?.id ? [technicians[0].id] : []
+  );
+  const [isTechnicianPickerOpen, setIsTechnicianPickerOpen] = useState(false);
+  const [assistantTechnicianName, setAssistantTechnicianName] = useState('');
   const [status, setStatus] = useState<ScheduleStatus>('Terjadwal');
   const [notes, setNotes] = useState('');
 
@@ -60,11 +62,11 @@ export const SurveyPage: React.FC = () => {
     setEditingSurveyId(null);
     setCustomerName('');
     setLocation('');
-    setSales('Rian');
-    setTechnicianName(technicians[0]?.name || 'Dimas');
-    setAssistantTechnicianName('Arwan');
-    setDate('2026-09-20');
-    setTime('09:00');
+    setSales('');
+    setTechnicianName(technicians[0]?.name || '');
+    setSelectedTechnicianIds(technicians[0]?.id ? [technicians[0].id] : []);
+    setIsTechnicianPickerOpen(false);
+    setAssistantTechnicianName('');
     setStatus('Terjadwal');
     setNotes('');
     setMeasurements([
@@ -86,10 +88,16 @@ export const SurveyPage: React.FC = () => {
     setCustomerName(survey.customerName);
     setLocation(survey.location);
     setSales(survey.sales);
+    const existingTechnicianIds = Array.from(new Set([
+      ...(survey.technicianIds || [survey.technicianId]),
+      ...(survey.technicianNames || [])
+        .map((name) => technicians.find((technician) => technician.name === name)?.id)
+        .filter((id): id is string => Boolean(id)),
+    ]));
+    setSelectedTechnicianIds(existingTechnicianIds);
+    setIsTechnicianPickerOpen(false);
     setTechnicianName(survey.technicianName);
     setAssistantTechnicianName(survey.assistantTechnicianName || '');
-    setDate(survey.date);
-    setTime(survey.time);
     setStatus(survey.status);
     setNotes(survey.notes || '');
     setMeasurements(
@@ -135,6 +143,15 @@ export const SurveyPage: React.FC = () => {
     );
   };
 
+  const selectedTechnicians = technicians.filter((technician) => selectedTechnicianIds.includes(technician.id));
+  const toggleTechnician = (technicianId: string) => {
+    setSelectedTechnicianIds((currentIds) =>
+      currentIds.includes(technicianId)
+        ? currentIds.filter((id) => id !== technicianId)
+        : [...currentIds, technicianId]
+    );
+  };
+
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
     if (!customerName || !location) {
@@ -142,18 +159,22 @@ export const SurveyPage: React.FC = () => {
       return;
     }
 
-    const techObj = technicians.find((t) => t.name === technicianName);
+    if (selectedTechnicians.length === 0) {
+      showToast('Pilih minimal satu teknisi', undefined, 'error');
+      return;
+    }
+    const technicianNames = selectedTechnicians.map((technician) => technician.name);
 
     if (editingSurveyId) {
       updateSurvey(editingSurveyId, {
         customerName,
         location,
         sales,
-        technicianId: techObj?.id || 'TKN-001',
-        technicianName,
-        assistantTechnicianName,
-        date,
-        time,
+        technicianId: selectedTechnicians[0].id,
+        technicianName: technicianNames[0],
+        technicianIds: selectedTechnicians.map((technician) => technician.id),
+        technicianNames,
+        assistantTechnicianName: technicianNames.slice(1).join(', '),
         status,
         notes,
         measurements,
@@ -163,11 +184,13 @@ export const SurveyPage: React.FC = () => {
         customerName,
         location,
         sales,
-        technicianId: techObj?.id || 'TKN-001',
-        technicianName,
-        assistantTechnicianName,
-        date,
-        time,
+        technicianId: selectedTechnicians[0].id,
+        technicianName: technicianNames[0],
+        technicianIds: selectedTechnicians.map((technician) => technician.id),
+        technicianNames,
+        assistantTechnicianName: technicianNames.slice(1).join(', '),
+        date: '',
+        time: '',
         status,
         notes,
         measurements,
@@ -190,6 +213,8 @@ export const SurveyPage: React.FC = () => {
 
     return matchesSearch && matchesStatus && matchesSales;
   });
+  const salesOptions = Array.from(new Set(surveys.map((survey) => survey.sales).filter(Boolean)));
+  const getSurveySchedule = (survey: SurveyItem) => schedules.find((schedule) => schedule.surveyId === survey.id);
 
   const totalSurveys = surveys.length;
   const scheduledCount = surveys.filter((s) => s.status === 'Terjadwal').length;
@@ -309,9 +334,9 @@ export const SurveyPage: React.FC = () => {
               className="text-xs font-semibold rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#B88710]/20 focus:border-[#B88710] cursor-pointer"
             >
               <option value="all">Semua Sales</option>
-              <option value="Rian">Sales Rian</option>
-              <option value="Budi Hartono">Sales Budi</option>
-              <option value="Andi">Sales Andi</option>
+              {salesOptions.map((salesName) => (
+                <option key={salesName} value={salesName}>{salesName}</option>
+              ))}
             </select>
           </div>
         </div>
@@ -355,19 +380,23 @@ export const SurveyPage: React.FC = () => {
                     <td className="py-3.5 px-4">
                       <div className="text-slate-800 font-bold">{survey.sales}</div>
                       <div className="text-[11px] text-[#8C6207] font-semibold mt-0.5">
-                        {survey.technicianName}
-                        {survey.assistantTechnicianName && ` & ${survey.assistantTechnicianName}`}
+                        {(survey.technicianNames?.length
+                          ? survey.technicianNames
+                          : [survey.technicianName, ...(survey.assistantTechnicianName ? [survey.assistantTechnicianName] : [])]
+                        ).join(', ')}
                       </div>
                     </td>
                     <td className="py-3.5 px-4">
-                      <div className="font-bold text-slate-800 flex items-center gap-1.5">
-                        <Calendar className="w-3.5 h-3.5 text-slate-400" />
-                        {survey.date}
-                      </div>
-                      <span className="text-[11px] text-slate-500 font-mono mt-0.5 inline-flex items-center gap-1">
-                        <Clock className="w-3.5 h-3.5 text-slate-400" />
-                        {survey.time} WIB
-                      </span>
+                      {(() => {
+                        const schedule = getSurveySchedule(survey);
+                        return schedule ? (
+                          <div className="font-bold text-slate-800 flex items-center gap-1.5">
+                            <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                            {schedule.date}
+                            <span className="text-[11px] text-slate-500 font-mono">{schedule.time} WIB</span>
+                          </div>
+                        ) : <span className="text-slate-400 italic">Belum dijadwalkan</span>;
+                      })()}
                     </td>
                     <td className="py-3.5 px-4">
                       {survey.measurements && survey.measurements.length > 0 ? (
@@ -443,12 +472,21 @@ export const SurveyPage: React.FC = () => {
               </div>
               <div>
                 <span className="text-slate-400 block">Teknisi Pengukur:</span>
-                <span className="font-bold">{selectedSurveyForDetail.technicianName}</span>
+                <span className="font-bold">
+                  {(selectedSurveyForDetail.technicianNames?.length
+                    ? selectedSurveyForDetail.technicianNames
+                    : [selectedSurveyForDetail.technicianName]
+                  ).join(', ')}
+                </span>
               </div>
               <div>
-                <span className="text-slate-400 block">Tanggal:</span>
-                <span className="font-bold">{selectedSurveyForDetail.date} ({selectedSurveyForDetail.time})</span>
+                <span className="text-slate-400 block">Jadwal:</span>
+                {(() => {
+                  const schedule = getSurveySchedule(selectedSurveyForDetail);
+                  return schedule ? <span className="font-bold">{schedule.date} ({schedule.time})</span> : <span className="text-slate-500">Belum dijadwalkan</span>;
+                })()}
               </div>
+              <button type="button" onClick={() => navigate('jadwal')} className="text-[#8C6207] font-bold">Kelola di Kalender</button>
             </div>
 
             <div className="overflow-x-auto rounded-xl border border-slate-200">
@@ -495,7 +533,7 @@ export const SurveyPage: React.FC = () => {
               <div className="flex items-center gap-2">
                 <ClipboardList className="w-5 h-5 text-[#B88710]" />
                 <h3 className="text-base font-bold text-[#111827]">
-                  {editingSurveyId ? 'Edit Jadwal Survey' : 'Jadwalkan Survey Baru'}
+                  {editingSurveyId ? 'Edit Data Survey' : 'Tambah Survey'}
                 </h3>
               </div>
               <button
@@ -508,6 +546,22 @@ export const SurveyPage: React.FC = () => {
             </div>
 
             <form onSubmit={handleSave} className="space-y-4">
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs">
+                <span className="block text-slate-400">Jadwal Survey</span>
+                {(() => {
+                  const survey = surveys.find((item) => item.id === editingSurveyId);
+                  const schedule = survey ? getSurveySchedule(survey) : undefined;
+                  return schedule ? (
+                    <>
+                      <p className="font-semibold text-slate-700">{schedule.date} - {schedule.time}</p>
+                      <p className="text-slate-500">Status: {schedule.status}</p>
+                    </>
+                  ) : <p className="font-semibold text-slate-700">Belum dijadwalkan</p>;
+                })()}
+                <button type="button" onClick={() => navigate('jadwal')} className="mt-1 text-[#8C6207] font-bold hover:underline">
+                  Dikelola melalui Kalender Jadwal
+                </button>
+              </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">Nama Pelanggan *</label>
@@ -543,51 +597,77 @@ export const SurveyPage: React.FC = () => {
                     className="w-full text-xs rounded-xl border border-slate-300 p-2.5 focus:ring-2 focus:ring-[#B88710]/20 focus:border-[#B88710] outline-none"
                   />
                 </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Teknisi Utama</label>
-                  <select
-                    value={technicianName}
-                    onChange={(e) => setTechnicianName(e.target.value)}
-                    className="w-full text-xs rounded-xl border border-slate-300 p-2.5 focus:ring-2 focus:ring-[#B88710]/20 focus:border-[#B88710] outline-none cursor-pointer"
-                  >
-                    {technicians.map((t) => (
-                      <option key={t.id} value={t.name}>
-                        {t.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Teknisi Pendamping</label>
-                  <input
-                    type="text"
-                    value={assistantTechnicianName}
-                    onChange={(e) => setAssistantTechnicianName(e.target.value)}
-                    placeholder="Contoh: Arwan"
-                    className="w-full text-xs rounded-xl border border-slate-300 p-2.5 focus:ring-2 focus:ring-[#B88710]/20 focus:border-[#B88710] outline-none"
-                  />
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Teknisi yang Mendampingi *</label>
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setIsTechnicianPickerOpen((isOpen) => !isOpen)}
+                      className="w-full min-h-10 text-left text-xs rounded-xl border border-slate-300 bg-white p-2.5 focus:ring-2 focus:ring-[#B88710]/20 focus:border-[#B88710] outline-none cursor-pointer"
+                    >
+                      {selectedTechnicians.length === 0 ? (
+                        <span className="text-slate-400">Pilih satu atau beberapa teknisi</span>
+                      ) : (
+                        <span className="flex flex-wrap gap-1.5">
+                          {selectedTechnicians.map((technician) => (
+                            <span
+                              key={technician.id}
+                              className="inline-flex items-center gap-1 rounded-lg bg-[#FAF2DF] border border-[#F2E0B5] px-2 py-1 text-[#8C6207] font-semibold"
+                            >
+                              {technician.name}
+                              <span
+                                role="button"
+                                tabIndex={0}
+                                aria-label={`Hapus ${technician.name}`}
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  toggleTechnician(technician.id);
+                                }}
+                                onKeyDown={(event) => {
+                                  if (event.key === 'Enter' || event.key === ' ') {
+                                    event.preventDefault();
+                                    event.stopPropagation();
+                                    toggleTechnician(technician.id);
+                                  }
+                                }}
+                                className="cursor-pointer text-[#B88710] hover:text-[#8C6207]"
+                              >
+                                <X className="w-3 h-3" />
+                              </span>
+                            </span>
+                          ))}
+                        </span>
+                      )}
+                    </button>
+
+                    {isTechnicianPickerOpen && (
+                      <div className="absolute z-20 mt-1 w-full rounded-xl border border-slate-200 bg-white p-2 shadow-lg">
+                        {technicians.length === 0 ? (
+                          <p className="px-2 py-2 text-xs text-slate-400">Belum ada teknisi.</p>
+                        ) : technicians.map((technician) => {
+                          const isSelected = selectedTechnicianIds.includes(technician.id);
+                          return (
+                            <button
+                              key={technician.id}
+                              type="button"
+                              onClick={() => toggleTechnician(technician.id)}
+                              className={`flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-left text-xs transition-colors ${
+                                isSelected ? 'bg-[#FAF2DF] text-[#8C6207] font-bold' : 'text-slate-700 hover:bg-slate-50'
+                              }`}
+                            >
+                              <span>{technician.name} ({technician.id})</span>
+                              {isSelected && <CheckCircle2 className="w-4 h-4 text-[#B88710]" />}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                  <p className="text-[10px] text-slate-400 mt-1">Pilih satu atau beberapa teknisi. Klik x pada chip untuk menghapus.</p>
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Tanggal</label>
-                  <input
-                    type="date"
-                    value={date}
-                    onChange={(e) => setDate(e.target.value)}
-                    className="w-full text-xs rounded-xl border border-slate-300 p-2.5 focus:ring-2 focus:ring-[#B88710]/20 focus:border-[#B88710] outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Jam</label>
-                  <input
-                    type="time"
-                    value={time}
-                    onChange={(e) => setTime(e.target.value)}
-                    className="w-full text-xs rounded-xl border border-slate-300 p-2.5 focus:ring-2 focus:ring-[#B88710]/20 focus:border-[#B88710] outline-none"
-                  />
-                </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">Status</label>
                   <select

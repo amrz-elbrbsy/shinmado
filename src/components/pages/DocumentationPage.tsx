@@ -36,12 +36,11 @@ export const DocumentationPage: React.FC = () => {
   // Form State
   const [formData, setFormData] = useState({
     title: '',
-    technicianName: 'Arwan',
-    technicianId: 'TKN-001',
-    date: '2026-09-18',
+    technicianName: '',
+    technicianId: '',
+    date: new Date().toISOString().slice(0, 10),
     description: '',
-    imageUrl:
-      'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=800&q=80',
+    imageUrl: '',
   });
 
   const filteredDocs = documentations.filter((doc) => {
@@ -52,12 +51,11 @@ export const DocumentationPage: React.FC = () => {
   const handleOpenUpload = () => {
     setFormData({
       title: '',
-      technicianName: technicians[0]?.name || 'Arwan',
-      technicianId: technicians[0]?.id || 'TKN-001',
-      date: '2026-09-18',
-      description: 'Roller Blind Dimout 12 Set Ruang Meeting',
-      imageUrl:
-        'https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=800&q=80',
+      technicianName: technicians[0]?.name || '',
+      technicianId: technicians[0]?.id || '',
+      date: new Date().toISOString().slice(0, 10),
+      description: '',
+      imageUrl: '',
     });
     setIsUploadModalOpen(true);
   };

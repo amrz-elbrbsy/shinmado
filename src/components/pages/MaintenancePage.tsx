@@ -49,8 +49,8 @@ export const MaintenancePage: React.FC = () => {
     equipmentId: equipment[0]?.id || '',
     equipmentName: equipment[0]?.name || '',
     maintenanceType: 'Servis Motor',
-    scheduledDate: '2026-09-22',
-    cost: 450000,
+    scheduledDate: new Date().toISOString().slice(0, 10),
+    cost: 0,
     status: 'Terjadwal',
     notes: '',
   });
@@ -66,8 +66,8 @@ export const MaintenancePage: React.FC = () => {
       equipmentId: equipment[0]?.id || '',
       equipmentName: equipment[0]?.name || '',
       maintenanceType: 'Servis Motor',
-      scheduledDate: '2026-09-22',
-      cost: 450000,
+      scheduledDate: new Date().toISOString().slice(0, 10),
+      cost: 0,
       status: 'Terjadwal',
       notes: '',
     });

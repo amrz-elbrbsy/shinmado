@@ -11,6 +11,7 @@ import {
   Clock,
   Edit2,
   Trash2,
+  Eye,
 } from 'lucide-react';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
@@ -20,7 +21,7 @@ import { Input } from '../ui/Input';
 import { ConfirmationDialog } from '../ui/ConfirmationDialog';
 import { EmptyState } from '../ui/EmptyState';
 import { useApp } from '../../context/AppContext';
-import { Equipment, EquipmentCondition, EquipmentStatus } from '../../types';
+import { Equipment, EquipmentCondition, EquipmentStatus, EquipmentUnit } from '../../types';
 
 export const EquipmentPage: React.FC = () => {
   const {
@@ -28,6 +29,10 @@ export const EquipmentPage: React.FC = () => {
     addEquipment,
     updateEquipment,
     deleteEquipment,
+    loans,
+    technicians,
+    addLoan,
+    returnLoan,
     navigate,
   } = useApp();
 
@@ -39,6 +44,10 @@ export const EquipmentPage: React.FC = () => {
   const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
   const [editingEquipment, setEditingEquipment] = useState<Equipment | null>(null);
   const [deletingEquipment, setDeletingEquipment] = useState<Equipment | null>(null);
+  const [viewingEquipment, setViewingEquipment] = useState<Equipment | null>(null);
+  const [selectedUnitId, setSelectedUnitId] = useState('');
+  const [unitBorrowerId, setUnitBorrowerId] = useState(technicians[0]?.id || '');
+  const [unitReturnDate, setUnitReturnDate] = useState('');
 
   // Form State
   const [formData, setFormData] = useState({
@@ -48,7 +57,29 @@ export const EquipmentPage: React.FC = () => {
     condition: 'Baik' as EquipmentCondition,
     serialNumber: '',
     notes: '',
+    unitCount: 1,
   });
+
+  const getUnits = (item: Equipment) => item.units || [{
+    id: `${item.id}-UNIT-001`,
+    equipmentId: item.id,
+    code: `${item.code || item.id}-001`,
+    status: item.status,
+    condition: item.condition,
+    serialNumber: item.serialNumber,
+    currentBorrower: item.currentBorrower,
+    currentBorrowerId: item.currentBorrowerId,
+  }];
+  const getUnitCounts = (item: Equipment) => {
+    const units = getUnits(item);
+    return {
+      total: units.length,
+      available: units.filter((unit) => unit.status === 'Tersedia').length,
+      borrowed: units.filter((unit) => unit.status === 'Dipinjam').length,
+      maintenance: units.filter((unit) => unit.status === 'Maintenance').length,
+      damaged: units.filter((unit) => unit.status === 'Rusak').length,
+    };
+  };
 
   const categories = Array.from(new Set(equipment.map((e) => e.category)));
 
@@ -61,8 +92,8 @@ export const EquipmentPage: React.FC = () => {
       return false;
     }
     if (filterCategory !== 'all' && item.category !== filterCategory) return false;
-    if (filterStatus !== 'all' && item.status !== filterStatus) return false;
-    if (filterCondition !== 'all' && item.condition !== filterCondition) return false;
+    if (filterStatus !== 'all' && !getUnits(item).some((unit) => unit.status === filterStatus)) return false;
+    if (filterCondition !== 'all' && !getUnits(item).some((unit) => unit.condition === filterCondition)) return false;
     return true;
   });
 
@@ -75,6 +106,7 @@ export const EquipmentPage: React.FC = () => {
       condition: 'Baik',
       serialNumber: '',
       notes: '',
+      unitCount: 1,
     });
     setIsAddDrawerOpen(true);
   };
@@ -88,6 +120,7 @@ export const EquipmentPage: React.FC = () => {
       condition: item.condition,
       serialNumber: item.serialNumber || '',
       notes: item.notes || '',
+      unitCount: item.units?.length || 1,
     });
     setIsAddDrawerOpen(true);
   };
@@ -110,6 +143,39 @@ export const EquipmentPage: React.FC = () => {
       setDeletingEquipment(null);
     }
   };
+
+  const openUnitDetail = (item: Equipment) => {
+    setViewingEquipment(item);
+    setSelectedUnitId(getUnits(item).find((unit) => unit.status === 'Tersedia')?.id || '');
+    setUnitBorrowerId(technicians[0]?.id || '');
+    setUnitReturnDate('');
+  };
+
+  const handleUnitBorrow = (item: Equipment, unitId: string) => {
+    const unit = getUnits(item).find((candidate) => candidate.id === unitId);
+    const technician = technicians.find((candidate) => candidate.id === unitBorrowerId);
+    if (!unit || unit.status !== 'Tersedia' || !technician) return;
+    const created = addLoan({
+      equipmentId: item.id,
+      unitId: unit.id,
+      unitCode: unit.code,
+      equipmentCode: item.code,
+      equipmentName: item.name,
+      borrowerName: technician.name,
+      technicianId: technician.id,
+      borrowDate: new Date().toISOString().slice(0, 10),
+      borrowedAt: new Date().toISOString(),
+      estimatedReturnDate: unitReturnDate,
+      status: 'Dipinjam',
+    });
+    if (created) setSelectedUnitId('');
+  };
+
+  const activeLoanForUnit = (unit: EquipmentUnit) =>
+    loans.find((loan) =>
+      (loan.unitId === unit.id || (!loan.unitId && loan.equipmentId === unit.equipmentId && loan.unitCode === unit.code)) &&
+      (loan.status === 'Dipinjam' || loan.status === 'Terlambat')
+    );
 
   return (
     <div className="space-y-6">
@@ -150,12 +216,12 @@ export const EquipmentPage: React.FC = () => {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white rounded-2xl border border-slate-200/80 p-4 shadow-xs">
           <div className="flex items-center justify-between text-slate-500 text-xs font-semibold">
-            <span>Total Peralatan</span>
+            <span>Total Unit</span>
             <div className="w-7 h-7 rounded-lg bg-[#FAF2DF] text-[#B88710] flex items-center justify-center">
               <Wrench className="w-3.5 h-3.5" />
             </div>
           </div>
-          <p className="text-2xl font-black text-slate-900 mt-2">{equipment.length}</p>
+          <p className="text-2xl font-black text-slate-900 mt-2">{equipment.reduce((sum, item) => sum + getUnits(item).length, 0)}</p>
           <p className="text-[11px] text-slate-400 mt-0.5">Unit terdata inventaris</p>
         </div>
 
@@ -167,7 +233,7 @@ export const EquipmentPage: React.FC = () => {
             </div>
           </div>
           <p className="text-2xl font-black text-emerald-600 mt-2">
-            {equipment.filter((e) => e.status === 'Tersedia').length}
+            {equipment.reduce((sum, item) => sum + getUnits(item).filter((unit) => unit.status === 'Tersedia').length, 0)}
           </p>
           <p className="text-[11px] text-emerald-600 font-semibold mt-0.5">Siap dipakai kerja</p>
         </div>
@@ -180,7 +246,7 @@ export const EquipmentPage: React.FC = () => {
             </div>
           </div>
           <p className="text-2xl font-black text-slate-900 mt-2">
-            {equipment.filter((e) => e.status === 'Dipinjam').length}
+            {equipment.reduce((sum, item) => sum + getUnits(item).filter((unit) => unit.status === 'Dipinjam').length, 0)}
           </p>
           <p className="text-[11px] text-amber-600 font-semibold mt-0.5">Berada di teknisi</p>
         </div>
@@ -193,7 +259,7 @@ export const EquipmentPage: React.FC = () => {
             </div>
           </div>
           <p className="text-2xl font-black text-rose-600 mt-2">
-            {equipment.filter((e) => e.status === 'Maintenance').length}
+            {equipment.reduce((sum, item) => sum + getUnits(item).filter((unit) => unit.status === 'Maintenance' || unit.status === 'Rusak').length, 0)}
           </p>
           <p className="text-[11px] text-rose-600 font-semibold mt-0.5">Servis atau kalibrasi</p>
         </div>
@@ -238,6 +304,7 @@ export const EquipmentPage: React.FC = () => {
               <option value="Tersedia">Tersedia</option>
               <option value="Dipinjam">Dipinjam</option>
               <option value="Maintenance">Maintenance</option>
+              <option value="Rusak">Rusak</option>
             </select>
           </div>
 
@@ -264,7 +331,7 @@ export const EquipmentPage: React.FC = () => {
               <tr className="border-b border-slate-200/80 bg-slate-50/90 text-[11px] font-bold text-slate-600 uppercase tracking-wider">
                 <th className="py-3.5 px-6">ID & Nama Alat</th>
                 <th className="py-3.5 px-6">Kategori</th>
-                <th className="py-3.5 px-6">Status</th>
+                <th className="py-3.5 px-6">Ringkasan Unit</th>
                 <th className="py-3.5 px-6">Kondisi</th>
                 <th className="py-3.5 px-6">Peminjam Saat Ini</th>
                 <th className="py-3.5 px-6 text-right">Action</th>
@@ -283,6 +350,10 @@ export const EquipmentPage: React.FC = () => {
               ) : (
                 filteredEquipment.map((item) => (
                   <tr key={item.id} className="hover:bg-slate-50/80 transition-colors">
+                    {(() => {
+                      const counts = getUnitCounts(item);
+                      return (
+                        <>
                     <td className="py-3.5 px-6">
                       <div className="flex items-center gap-2.5">
                         <div className="p-2 rounded-xl bg-[#FAF2DF] text-[#B88710]">
@@ -291,14 +362,20 @@ export const EquipmentPage: React.FC = () => {
                         <div>
                           <p className="font-bold text-slate-900">{item.name}</p>
                           <p className="text-[10px] text-slate-400 font-mono">
-                            {item.id} {item.serialNumber ? `• SN: ${item.serialNumber}` : ''}
+                            {item.code || item.id} • {counts.total} unit {item.serialNumber ? `• SN: ${item.serialNumber}` : ''}
                           </p>
                         </div>
                       </div>
                     </td>
                     <td className="py-3.5 px-6 font-medium text-slate-600">{item.category}</td>
                     <td className="py-3.5 px-6">
-                      <Badge status={item.status} />
+                      <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[10px] font-semibold">
+                        <span>Total: {counts.total}</span>
+                        <span className="text-emerald-600">Tersedia: {counts.available}</span>
+                        <span className="text-amber-700">Dipinjam: {counts.borrowed}</span>
+                        <span className="text-slate-500">Maintenance: {counts.maintenance}</span>
+                        <span className="text-rose-600">Rusak: {counts.damaged}</span>
+                      </div>
                     </td>
                     <td className="py-3.5 px-6">
                       <span
@@ -319,9 +396,9 @@ export const EquipmentPage: React.FC = () => {
                       </span>
                     </td>
                     <td className="py-3.5 px-6">
-                      {item.currentBorrower ? (
+                      {getUnitCounts(item).borrowed > 0 ? (
                         <span className="font-semibold text-[#8C6207] bg-[#FAF2DF] px-2 py-0.5 rounded-md border border-[#F2E0B5]">
-                          {item.currentBorrower}
+                          {getUnitCounts(item).borrowed} unit dipinjam
                         </span>
                       ) : (
                         <span className="text-slate-400 font-mono">-</span>
@@ -329,6 +406,15 @@ export const EquipmentPage: React.FC = () => {
                     </td>
                     <td className="py-3.5 px-6 text-right">
                       <div className="flex items-center justify-end gap-1">
+                        <button
+                          type="button"
+                          onClick={() => openUnitDetail(item)}
+                          className="p-1.5 rounded-lg text-slate-500 hover:text-[#8C6207] hover:bg-[#FAF2DF] transition-colors"
+                          title="Detail Unit"
+                        >
+                          <Eye className="w-4 h-4" />
+                          <span className="sr-only">Lihat Unit</span>
+                        </button>
                         <button
                           type="button"
                           onClick={() => handleOpenEdit(item)}
@@ -345,6 +431,9 @@ export const EquipmentPage: React.FC = () => {
                         </button>
                       </div>
                     </td>
+                        </>
+                      );
+                    })()}
                   </tr>
                 ))
               )}
@@ -380,6 +469,15 @@ export const EquipmentPage: React.FC = () => {
             required
           />
 
+          <Input
+            label="Jumlah Unit Fisik *"
+            type="number"
+            min={1}
+            value={formData.unitCount}
+            onChange={(e) => setFormData({ ...formData, unitCount: Math.max(1, Number(e.target.value) || 1) })}
+            required
+          />
+
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1.5">Kategori</label>
             <select
@@ -406,8 +504,8 @@ export const EquipmentPage: React.FC = () => {
                 className="w-full text-xs bg-white text-slate-800 rounded-xl border border-slate-200 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#B88710]/20 focus:border-[#B88710]"
               >
                 <option value="Tersedia">Tersedia</option>
-                <option value="Dipinjam">Dipinjam</option>
                 <option value="Maintenance">Maintenance</option>
+                <option value="Rusak">Rusak</option>
               </select>
             </div>
 
@@ -446,6 +544,110 @@ export const EquipmentPage: React.FC = () => {
           </div>
         </form>
       </Modal>
+
+      {viewingEquipment && (
+        <Modal
+          isOpen={Boolean(viewingEquipment)}
+          onClose={() => setViewingEquipment(null)}
+          title={`Detail Unit: ${viewingEquipment.name}`}
+          subtitle={`${getUnits(viewingEquipment).length} unit fisik terdaftar`}
+          maxWidth="lg"
+          footer={<Button variant="secondary" size="sm" onClick={() => setViewingEquipment(null)}>Tutup</Button>}
+        >
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4 text-xs">
+            {(['Tersedia', 'Dipinjam', 'Maintenance', 'Rusak'] as EquipmentStatus[]).map((unitStatus) => (
+              <div key={unitStatus} className="rounded-xl bg-slate-50 border border-slate-200 p-3">
+                <span className="text-slate-400 block">{unitStatus}</span>
+                <strong className="text-lg text-slate-900">{getUnits(viewingEquipment).filter((unit) => unit.status === unitStatus).length}</strong>
+              </div>
+            ))}
+          </div>
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 mb-4 space-y-2 text-xs">
+            <p className="font-bold text-slate-800">Pinjam unit tersedia</p>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <select
+                value={selectedUnitId}
+                onChange={(event) => setSelectedUnitId(event.target.value)}
+                className="rounded-lg border border-slate-200 bg-white px-2.5 py-2"
+              >
+                <option value="">Pilih unit</option>
+                {getUnits(viewingEquipment).map((unit) => (
+                  <option key={unit.id} value={unit.id} disabled={unit.status !== 'Tersedia'}>
+                    {unit.code} - {unit.status === 'Dipinjam' ? `Sedang Dipinjam${unit.currentBorrower ? ` - ${unit.currentBorrower}` : ''}` : unit.status}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={unitBorrowerId}
+                onChange={(event) => setUnitBorrowerId(event.target.value)}
+                className="rounded-lg border border-slate-200 bg-white px-2.5 py-2"
+              >
+                <option value="">Pilih teknisi</option>
+                {technicians.map((technician) => <option key={technician.id} value={technician.id}>{technician.name}</option>)}
+              </select>
+              <Input type="date" value={unitReturnDate} onChange={(event) => setUnitReturnDate(event.target.value)} />
+            </div>
+            <Button
+              size="sm"
+              variant="primary"
+              disabled={!selectedUnitId || !unitBorrowerId || !unitReturnDate || getUnits(viewingEquipment).find((unit) => unit.id === selectedUnitId)?.status !== 'Tersedia'}
+              onClick={() => handleUnitBorrow(viewingEquipment, selectedUnitId)}
+            >
+              Pinjam Unit
+            </Button>
+          </div>
+          <div className="overflow-x-auto rounded-xl border border-slate-200">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-slate-50 font-bold text-slate-600">
+                <tr>
+                  <th className="p-2.5">Kode Unit</th>
+                  <th className="p-2.5">Status</th>
+                  <th className="p-2.5">Dipinjam Oleh</th>
+                  <th className="p-2.5">Tgl Pinjam</th>
+                  <th className="p-2.5">Tgl Kembali</th>
+                  <th className="p-2.5 text-right">Aksi</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {getUnits(viewingEquipment).map((unit) => {
+                  const activeLoan = activeLoanForUnit(unit);
+                  return (
+                  <tr key={unit.id}>
+                    <td className="p-2.5 font-mono font-bold text-slate-900">{unit.code}</td>
+                    <td className="p-2.5"><Badge status={unit.status} /></td>
+                    <td className="p-2.5">{unit.currentBorrower || activeLoan?.borrowerName || '-'}</td>
+                    <td className="p-2.5 font-mono">{unit.lastBorrowDate || '-'}</td>
+                    <td className="p-2.5 font-mono">{unit.lastReturnDate || '-'}</td>
+                    <td className="p-2.5">
+                      {activeLoan ? (
+                        <Button size="sm" variant="outline" onClick={() => returnLoan(activeLoan.id, new Date().toISOString().slice(0, 10), 'Baik')}>
+                          Kembalikan
+                        </Button>
+                      ) : unit.status === 'Tersedia' ? 'TERSEDIA' : 'TIDAK TERSEDIA'}
+                    </td>
+                  </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          <div className="mt-4">
+            <h4 className="text-xs font-bold text-slate-800 mb-2">Riwayat Peminjaman</h4>
+            {loans.filter((loan) => loan.equipmentId === viewingEquipment.id).length === 0 ? (
+              <p className="text-xs text-slate-400">Belum ada riwayat peminjaman untuk peralatan ini.</p>
+            ) : (
+              <div className="space-y-1.5 text-xs">
+                {loans.filter((loan) => loan.equipmentId === viewingEquipment.id).map((loan) => (
+                  <div key={loan.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-100 px-3 py-2">
+                    <span className="font-mono font-bold">{loan.unitCode || '-'} · {loan.borrowerName}</span>
+                    <span>{loan.borrowDate} → {loan.actualReturnDate || '-'} · {loan.status}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </Modal>
+      )}
 
       {/* CONFIRM DELETE */}
       <ConfirmationDialog

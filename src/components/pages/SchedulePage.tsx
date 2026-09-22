@@ -28,15 +28,18 @@ import { useApp } from '../../context/AppContext';
 import { Schedule, JobType, ScheduleStatus } from '../../types';
 
 export const SchedulePage: React.FC = () => {
-  const { schedules, addSchedule, updateSchedule, deleteSchedule, technicians } = useApp();
+  const { schedules, surveys, installations, addSchedule, updateSchedule, deleteSchedule, technicians } = useApp();
+  const getLocalDateKey = (date = new Date()) =>
+    `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 
   // Active Tab: Semua | Survey / Pengukuran | Pemasangan | Perbaikan | Lainnya
   const [activeTab, setActiveTab] = useState<string>('Semua');
 
   // Interactive Calendar State
-  const [currentYear, setCurrentYear] = useState(2026);
-  const [currentMonth, setCurrentMonth] = useState(8); // 0-indexed, 8 = September
-  const [selectedDate, setSelectedDate] = useState('2026-09-18');
+  const initialDate = new Date();
+  const [currentYear, setCurrentYear] = useState(initialDate.getFullYear());
+  const [currentMonth, setCurrentMonth] = useState(initialDate.getMonth());
+  const [selectedDate, setSelectedDate] = useState(getLocalDateKey(initialDate));
 
   // Filters
   const [filterJobType, setFilterJobType] = useState('all');
@@ -52,6 +55,8 @@ export const SchedulePage: React.FC = () => {
 
   // Add / Edit Form State
   const [formData, setFormData] = useState<{
+    surveyId: string;
+    installationId: string;
     date: string;
     time: string;
     type: JobType;
@@ -65,13 +70,15 @@ export const SchedulePage: React.FC = () => {
     status: ScheduleStatus;
     notes: string;
   }>({
-    date: '2026-09-18',
+    surveyId: '',
+    installationId: '',
+    date: getLocalDateKey(),
     time: '09:00',
     type: 'Survey',
-    sales: 'Sales Andi',
-    technicianId: 'TKN-001',
-    technicianName: 'Arwan',
-    assistantTechnicianName: 'Arwan',
+    sales: '',
+    technicianId: '',
+    technicianName: '',
+    assistantTechnicianName: '',
     customerName: '',
     setsCount: 1,
     location: '',
@@ -145,20 +152,23 @@ export const SchedulePage: React.FC = () => {
     if (filterStatus !== 'all' && sch.status !== filterStatus) return false;
     return true;
   });
+  const salesOptions = Array.from(new Set(schedules.map((schedule) => schedule.sales).filter(Boolean)));
 
   const handleOpenAdd = () => {
     setEditingSchedule(null);
     setFormData({
-      date: selectedDate || '2026-09-18',
+      surveyId: '',
+      installationId: '',
+      date: selectedDate || getLocalDateKey(),
       time: '09:00',
       type: 'Survey',
-      sales: 'Sales Andi',
-      technicianId: technicians[0]?.id || 'TKN-001',
-      technicianName: technicians[0]?.name || 'Arwan',
-      assistantTechnicianName: technicians[0]?.name || 'Arwan',
+      sales: '',
+      technicianId: technicians[0]?.id || '',
+      technicianName: technicians[0]?.name || '',
+      assistantTechnicianName: technicians[0]?.name || '',
       customerName: '',
-      setsCount: 8,
-      location: 'Jakarta Selatan',
+      setsCount: 0,
+      location: '',
       status: 'Terjadwal',
       notes: '',
     });
@@ -168,6 +178,8 @@ export const SchedulePage: React.FC = () => {
   const handleOpenEdit = (sch: Schedule) => {
     setEditingSchedule(sch);
     setFormData({
+      surveyId: sch.surveyId || '',
+      installationId: sch.installationId || '',
       date: sch.date,
       time: sch.time,
       type: sch.type,
@@ -188,6 +200,8 @@ export const SchedulePage: React.FC = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.customerName || !formData.location) return;
+    if (!editingSchedule && formData.type === 'Survey' && !formData.surveyId) return;
+    if (!editingSchedule && formData.type === 'Pemasangan' && !formData.installationId) return;
 
     if (editingSchedule) {
       updateSchedule(editingSchedule.id, formData);
@@ -195,6 +209,46 @@ export const SchedulePage: React.FC = () => {
       addSchedule(formData);
     }
     setIsAddModalOpen(false);
+  };
+
+  const availableSurveys = surveys.filter((survey) => {
+    const linkedSchedule = schedules.find((schedule) => schedule.surveyId === survey.id);
+    return !linkedSchedule || linkedSchedule.id === editingSchedule?.id;
+  });
+  const availableInstallations = installations.filter((installation) => {
+    const linkedSchedule = schedules.find((schedule) => schedule.installationId === installation.id);
+    return !linkedSchedule || linkedSchedule.id === editingSchedule?.id;
+  });
+  const applySurveyToSchedule = (surveyId: string) => {
+    const survey = surveys.find((item) => item.id === surveyId);
+    if (!survey) return;
+    const names = survey.technicianNames?.length ? survey.technicianNames : [survey.technicianName];
+    setFormData((current) => ({
+      ...current,
+      surveyId,
+      installationId: '',
+      sales: survey.sales,
+      technicianId: survey.technicianId,
+      technicianName: names[0],
+      assistantTechnicianName: names.slice(1).join(', '),
+      customerName: survey.customerName,
+      location: survey.location,
+    }));
+  };
+  const applyInstallationToSchedule = (installationId: string) => {
+    const installation = installations.find((item) => item.id === installationId);
+    if (!installation) return;
+    setFormData((current) => ({
+      ...current,
+      surveyId: '',
+      installationId,
+      technicianId: installation.technicianId,
+      technicianName: installation.technicianName,
+      assistantTechnicianName: installation.teamMembers?.join(', ') || installation.assistantTechnicianName || '',
+      customerName: installation.customerName,
+      location: installation.location,
+      setsCount: installation.totalSets,
+    }));
   };
 
   const handleDeleteConfirm = () => {
@@ -353,7 +407,7 @@ export const SchedulePage: React.FC = () => {
               className="w-full text-xs font-semibold bg-slate-50 rounded-xl border border-slate-200 px-3 py-2 focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#B88710]/20 focus:border-[#B88710] cursor-pointer"
             >
               <option value="all">Semua Sales</option>
-              <option value="Sales Andi">Sales Andi</option>
+                {salesOptions.map((salesName) => <option key={salesName} value={salesName}>{salesName}</option>)}
               <option value="Sales Deni">Sales Deni</option>
             </select>
           </div>
@@ -462,7 +516,12 @@ export const SchedulePage: React.FC = () => {
               </span>
               <button
                 type="button"
-                onClick={() => setSelectedDate('2026-09-18')}
+                onClick={() => {
+                  const today = new Date();
+                  setCurrentYear(today.getFullYear());
+                  setCurrentMonth(today.getMonth());
+                  setSelectedDate(getLocalDateKey(today));
+                }}
                 className="text-[#8C6207] font-semibold hover:underline"
               >
                 Hari Ini
@@ -732,7 +791,12 @@ export const SchedulePage: React.FC = () => {
             </label>
             <select
               value={formData.type}
-              onChange={(e) => setFormData({ ...formData, type: e.target.value as JobType })}
+              onChange={(e) => setFormData({
+                ...formData,
+                type: e.target.value as JobType,
+                surveyId: '',
+                installationId: '',
+              })}
               className="w-full text-xs bg-white text-slate-800 rounded-xl border border-slate-200 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#B88710]/20 focus:border-[#B88710]"
             >
               <option value="Survey">Survey / Pengukuran</option>
@@ -745,63 +809,42 @@ export const SchedulePage: React.FC = () => {
           {/* Conditional minimal fields for Survey vs Pemasangan (Stage 6) */}
           {formData.type === 'Survey' ? (
             <>
-              <Input
-                label="Sales *"
-                placeholder="Contoh: Sales Andi"
-                value={formData.sales}
-                onChange={(e) => setFormData({ ...formData, sales: e.target.value })}
-                required
-              />
-
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                  Teknisi Pendamping *
-                </label>
+                <label className="block text-xs font-semibold text-slate-700 mb-1.5">Pilih Survey *</label>
                 <select
-                  value={formData.technicianName}
-                  onChange={(e) => {
-                    const sel = technicians.find((t) => t.name === e.target.value);
-                    setFormData({
-                      ...formData,
-                      technicianName: e.target.value,
-                      technicianId: sel?.id || 'TKN-001',
-                      assistantTechnicianName: e.target.value,
-                    });
-                  }}
+                  value={formData.surveyId}
+                  onChange={(e) => applySurveyToSchedule(e.target.value)}
+                  required={!editingSchedule}
                   className="w-full text-xs bg-white text-slate-800 rounded-xl border border-slate-200 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#B88710]/20 focus:border-[#B88710]"
                 >
-                  {technicians.map((t) => (
-                    <option key={t.id} value={t.name}>
-                      {t.name} ({t.id})
+                  <option value="">{editingSchedule && !formData.surveyId ? 'Jadwal lama tanpa relasi' : 'Pilih Survey yang sudah ada'}</option>
+                  {availableSurveys.map((survey) => (
+                    <option key={survey.id} value={survey.id}>
+                      {survey.id} - {survey.customerName}
                     </option>
                   ))}
                 </select>
+                {formData.surveyId && <p className="text-[10px] text-slate-400 mt-1">Sales, teknisi, customer, dan lokasi diambil dari Survey.</p>}
               </div>
             </>
-          ) : (
+          ) : formData.type === 'Pemasangan' ? (
             <>
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                  Teknisi Pelaksana *
-                </label>
+                <label className="block text-xs font-semibold text-slate-700 mb-1.5">Pilih Pemasangan *</label>
                 <select
-                  value={formData.technicianName}
-                  onChange={(e) => {
-                    const sel = technicians.find((t) => t.name === e.target.value);
-                    setFormData({
-                      ...formData,
-                      technicianName: e.target.value,
-                      technicianId: sel?.id || 'TKN-001',
-                    });
-                  }}
+                  value={formData.installationId}
+                  onChange={(e) => applyInstallationToSchedule(e.target.value)}
+                  required={!editingSchedule}
                   className="w-full text-xs bg-white text-slate-800 rounded-xl border border-slate-200 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#B88710]/20 focus:border-[#B88710]"
                 >
-                  {technicians.map((t) => (
-                    <option key={t.id} value={t.name}>
-                      {t.name} ({t.id})
+                  <option value="">{editingSchedule && !formData.installationId ? 'Jadwal lama tanpa relasi' : 'Pilih Pemasangan yang sudah ada'}</option>
+                  {availableInstallations.map((installation) => (
+                    <option key={installation.id} value={installation.id}>
+                      {installation.id} - {installation.projectName}
                     </option>
                   ))}
                 </select>
+                {formData.installationId && <p className="text-[10px] text-slate-400 mt-1">Teknisi, customer, lokasi, dan jumlah set diambil dari Pemasangan.</p>}
               </div>
 
               <Input
@@ -815,23 +858,36 @@ export const SchedulePage: React.FC = () => {
                 required
               />
             </>
+          ) : (
+            <>
+              <Input label="Sales / Penanggung Jawab" value={formData.sales} onChange={(e) => setFormData({ ...formData, sales: e.target.value })} />
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1.5">Teknisi Pelaksana</label>
+                <select
+                  value={formData.technicianName}
+                  onChange={(e) => {
+                    const technician = technicians.find((item) => item.name === e.target.value);
+                    setFormData({ ...formData, technicianName: e.target.value, technicianId: technician?.id || '' });
+                  }}
+                  className="w-full text-xs bg-white text-slate-800 rounded-xl border border-slate-200 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#B88710]/20 focus:border-[#B88710]"
+                >
+                  <option value="">Pilih teknisi</option>
+                  {technicians.map((technician) => <option key={technician.id} value={technician.name}>{technician.name} ({technician.id})</option>)}
+                </select>
+              </div>
+            </>
           )}
 
-          <Input
-            label="Nama Customer / Perusahaan *"
-            placeholder="Contoh: Bapak Budi / PT Graha"
-            value={formData.customerName}
-            onChange={(e) => setFormData({ ...formData, customerName: e.target.value })}
-            required
-          />
-
-          <Input
-            label="Lokasi / Alamat *"
-            placeholder="Contoh: Jakarta Selatan"
-            value={formData.location}
-            onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-            required
-          />
+          <div className="grid grid-cols-2 gap-3 text-xs">
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+              <span className="block text-slate-400">Customer / Perusahaan</span>
+              <strong className="text-slate-800">{formData.customerName || '-'}</strong>
+            </div>
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+              <span className="block text-slate-400">Lokasi / Alamat</span>
+              <strong className="text-slate-800">{formData.location || '-'}</strong>
+            </div>
+          </div>
 
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1.5">Status</label>

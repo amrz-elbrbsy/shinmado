@@ -47,11 +47,12 @@ export const LoansPage: React.FC = () => {
   // Form Pinjam state (Stage 8 requirement)
   const [borrowForm, setBorrowForm] = useState({
     equipmentId: equipment[0]?.id || '',
+    unitId: equipment[0]?.units?.find((unit) => unit.status === 'Tersedia')?.id || equipment[0]?.units?.[0]?.id || '',
     equipmentName: equipment[0]?.name || '',
-    borrowerName: technicians[0]?.name || 'Arwan',
-    technicianId: technicians[0]?.id || 'TKN-001',
-    borrowDate: '2026-09-18',
-    estimatedReturnDate: '2026-09-20',
+    borrowerName: technicians[0]?.name || '',
+    technicianId: technicians[0]?.id || '',
+    borrowDate: new Date().toISOString().slice(0, 10),
+    estimatedReturnDate: '',
     notes: '',
   });
 
@@ -69,14 +70,16 @@ export const LoansPage: React.FC = () => {
   });
 
   const handleOpenBorrow = () => {
-    const avail = equipment.find((e) => e.status === 'Tersedia') || equipment[0];
+    const avail = equipment.find((e) => e.units?.some((unit) => unit.status === 'Tersedia')) || equipment[0];
+    const availUnit = avail?.units?.find((unit) => unit.status === 'Tersedia') || avail?.units?.[0];
     setBorrowForm({
       equipmentId: avail?.id || '',
+      unitId: availUnit?.id || '',
       equipmentName: avail?.name || '',
-      borrowerName: technicians[0]?.name || 'Arwan',
-      technicianId: technicians[0]?.id || 'TKN-001',
-      borrowDate: '2026-09-18',
-      estimatedReturnDate: '2026-09-20',
+      borrowerName: technicians[0]?.name || '',
+      technicianId: technicians[0]?.id || '',
+      borrowDate: new Date().toISOString().slice(0, 10),
+      estimatedReturnDate: '',
       notes: '',
     });
     setIsBorrowDrawerOpen(true);
@@ -86,24 +89,27 @@ export const LoansPage: React.FC = () => {
     e.preventDefault();
     if (!borrowForm.equipmentId || !borrowForm.borrowerName) return;
 
-    addLoan({
+    const created = addLoan({
       equipmentId: borrowForm.equipmentId,
+      unitId: borrowForm.unitId,
+      unitCode: equipment.find((item) => item.id === borrowForm.equipmentId)?.units?.find((unit) => unit.id === borrowForm.unitId)?.code,
       equipmentName: borrowForm.equipmentName,
       borrowerName: borrowForm.borrowerName,
       technicianId: borrowForm.technicianId,
       borrowDate: borrowForm.borrowDate,
+      borrowedAt: new Date(`${borrowForm.borrowDate}T00:00:00`).toISOString(),
       estimatedReturnDate: borrowForm.estimatedReturnDate,
       status: 'Dipinjam',
       notes: borrowForm.notes,
     });
 
-    setIsBorrowDrawerOpen(false);
+    if (created) setIsBorrowDrawerOpen(false);
   };
 
   const handleOpenReturn = (loan: EquipmentLoan) => {
     setReturningLoan(loan);
     setReturnForm({
-      returnDate: '2026-09-18',
+      returnDate: new Date().toISOString().slice(0, 10),
       returnCondition: 'Baik',
       notes: '',
     });
@@ -284,7 +290,10 @@ export const LoansPage: React.FC = () => {
                     <td className="py-3.5 px-6 font-medium text-slate-900">
                       <div className="flex items-center gap-2">
                         <Wrench className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                        <span className="font-bold">{loan.equipmentName}</span>
+                        <div>
+                          <span className="font-bold block">{loan.equipmentName}</span>
+                          <span className="text-[10px] text-slate-400 font-mono">{loan.unitCode || loan.equipmentCode || '-'}</span>
+                        </div>
                       </div>
                     </td>
                     <td className="py-3.5 px-6">
@@ -383,9 +392,11 @@ export const LoansPage: React.FC = () => {
               value={borrowForm.equipmentId}
               onChange={(e) => {
                 const found = equipment.find((eq) => eq.id === e.target.value);
+                const firstAvailableUnit = found?.units?.find((unit) => unit.status === 'Tersedia');
                 setBorrowForm({
                   ...borrowForm,
                   equipmentId: e.target.value,
+                  unitId: firstAvailableUnit?.id || '',
                   equipmentName: found?.name || '',
                 });
               }}
@@ -393,7 +404,25 @@ export const LoansPage: React.FC = () => {
             >
               {equipment.map((eq) => (
                 <option key={eq.id} value={eq.id}>
-                  {eq.name} ({eq.status} - {eq.condition})
+                  {eq.name} ({eq.units?.filter((unit) => unit.status === 'Tersedia').length || 0} tersedia)
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+              Pilih Unit Fisik *
+            </label>
+            <select
+              required
+              value={borrowForm.unitId}
+              onChange={(e) => setBorrowForm({ ...borrowForm, unitId: e.target.value })}
+              className="w-full text-xs bg-white text-slate-800 rounded-xl border border-slate-200 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#B88710]/20 focus:border-[#B88710]"
+            >
+              {(equipment.find((item) => item.id === borrowForm.equipmentId)?.units || []).map((unit) => (
+                <option key={unit.id} value={unit.id} disabled={unit.status !== 'Tersedia'}>
+                  {unit.code} ({unit.status === 'Dipinjam' ? `Sedang Dipinjam${unit.currentBorrower ? ` - ${unit.currentBorrower}` : ''}` : unit.status})
                 </option>
               ))}
             </select>
@@ -541,6 +570,7 @@ export const LoansPage: React.FC = () => {
             <div className="p-3.5 rounded-xl border border-slate-100 bg-white space-y-1">
               <span className="text-slate-400">Teknisi Peminjam</span>
               <p className="text-sm font-bold text-slate-900">{viewingLoan.borrowerName}</p>
+              <p className="text-[11px] text-slate-500 font-mono">Unit: {viewingLoan.unitCode || viewingLoan.equipmentCode || '-'}</p>
             </div>
 
             <div className="grid grid-cols-2 gap-2">

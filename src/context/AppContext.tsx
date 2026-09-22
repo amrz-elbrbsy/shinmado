@@ -17,6 +17,7 @@ import {
   SurveyItem,
   Installation,
   ActivityLog,
+  EquipmentUnit,
 } from '../types';
 import {
   initialTechnicians,
@@ -116,7 +117,7 @@ interface AppContextType {
 
   // Loans
   loans: EquipmentLoan[];
-  addLoan: (loan: Omit<EquipmentLoan, 'id'>) => void;
+  addLoan: (loan: Omit<EquipmentLoan, 'id'>) => boolean;
   updateLoan: (id: string, data: Partial<EquipmentLoan>) => void;
   deleteLoan: (id: string) => void;
   returnLoan: (
@@ -185,6 +186,66 @@ function saveStored<T>(key: string, data: T) {
   }
 }
 
+function createEquipmentUnit(equipment: Equipment, index: number, source?: Partial<EquipmentUnit>): EquipmentUnit {
+  const baseCode = equipment.code || equipment.id;
+  return {
+    id: source?.id || `${equipment.id}-UNIT-${String(index + 1).padStart(3, '0')}`,
+    equipmentId: equipment.id,
+    code: source?.code || `${baseCode}-${String(index + 1).padStart(3, '0')}`,
+    status: source?.status || equipment.status,
+    condition: source?.condition || equipment.condition,
+    serialNumber: source?.serialNumber || equipment.serialNumber,
+    currentBorrower: source?.currentBorrower || equipment.currentBorrower,
+    currentBorrowerId: source?.currentBorrowerId || equipment.currentBorrowerId,
+    lastBorrowDate: source?.lastBorrowDate,
+    lastReturnDate: source?.lastReturnDate,
+  };
+}
+
+function normalizeEquipment(item: Equipment): Equipment {
+  const units = item.units?.length
+    ? item.units.map((unit, index) => createEquipmentUnit(item, index, unit))
+    : [createEquipmentUnit(item, 0)];
+  return {
+    ...item,
+    units,
+    unitCount: units.length,
+  };
+}
+
+function summarizeEquipment(item: Equipment, units: EquipmentUnit[]): Equipment {
+  const hasBorrowed = units.some((unit) => unit.status === 'Dipinjam');
+  const hasMaintenance = units.some((unit) => unit.status === 'Maintenance');
+  const hasDamaged = units.some((unit) => unit.status === 'Rusak');
+  const currentUnit = units.find((unit) => unit.status === 'Dipinjam');
+  return {
+    ...item,
+    units,
+    unitCount: units.length,
+    status: hasBorrowed ? 'Dipinjam' : hasMaintenance ? 'Maintenance' : hasDamaged ? 'Rusak' : 'Tersedia',
+    condition: units.every((unit) => unit.condition === 'Perlu Servis') ? 'Perlu Servis' : item.condition,
+    currentBorrower: currentUnit?.currentBorrower,
+    currentBorrowerId: currentUnit?.currentBorrowerId,
+  };
+}
+
+function normalizeSurvey(survey: SurveyItem): SurveyItem {
+  const technicianIds = survey.technicianIds?.length ? survey.technicianIds : [survey.technicianId];
+  const technicianNames = survey.technicianNames?.length
+    ? survey.technicianNames
+    : [survey.technicianName, ...(survey.assistantTechnicianName ? [survey.assistantTechnicianName] : [])];
+  const normalizedTechnicianIds = technicianIds.filter(Boolean);
+  const normalizedTechnicianNames = technicianNames.filter(Boolean);
+  return {
+    ...survey,
+    technicianIds: normalizedTechnicianIds,
+    technicianNames: normalizedTechnicianNames,
+    technicianId: normalizedTechnicianIds[0] || survey.technicianId,
+    technicianName: normalizedTechnicianNames[0] || survey.technicianName,
+    assistantTechnicianName: normalizedTechnicianNames.slice(1).join(', ') || undefined,
+  };
+}
+
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() =>
     loadStored<boolean>('auth', true)
@@ -204,7 +265,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     loadStored<Schedule[]>('schedules', initialSchedules)
   );
   const [surveys, setSurveys] = useState<SurveyItem[]>(() =>
-    loadStored<SurveyItem[]>('surveys', initialSurveys)
+    loadStored<SurveyItem[]>('surveys', initialSurveys).map(normalizeSurvey)
   );
   const [installations, setInstallations] = useState<Installation[]>(() =>
     loadStored<Installation[]>('installations', initialInstallations)
@@ -213,7 +274,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     loadStored<Target[]>('targets', initialTargets)
   );
   const [equipment, setEquipment] = useState<Equipment[]>(() =>
-    loadStored<Equipment[]>('equipment', initialEquipment)
+    loadStored<Equipment[]>('equipment', initialEquipment).map(normalizeEquipment)
   );
   const [loans, setLoans] = useState<EquipmentLoan[]>(() =>
     loadStored<EquipmentLoan[]>('loans', initialLoans)
@@ -404,6 +465,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Schedules CRUD
   const addSchedule = (scheduleData: Omit<Schedule, 'id'>) => {
+    if (scheduleData.surveyId && schedules.some((schedule) => schedule.surveyId === scheduleData.surveyId)) {
+      showToast('Jadwal Ditolak', 'Survey tersebut sudah memiliki jadwal.', 'error');
+      return;
+    }
+    if (scheduleData.installationId && schedules.some((schedule) => schedule.installationId === scheduleData.installationId)) {
+      showToast('Jadwal Ditolak', 'Pemasangan tersebut sudah memiliki jadwal.', 'error');
+      return;
+    }
     const maxNum = schedules.reduce((max, s) => {
       const num = parseInt(s.id.replace(/\D/g, ''), 10);
       return !isNaN(num) && num > max ? num : max;
@@ -415,16 +484,67 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       createdAt: new Date().toISOString(),
     };
     setSchedules((prev) => [newSchedule, ...prev]);
+    if (newSchedule.surveyId) {
+      setSurveys((prev) => prev.map((survey) => survey.id === newSchedule.surveyId
+        ? { ...survey, scheduleId: newSchedule.id, date: newSchedule.date, time: newSchedule.time }
+        : survey));
+    }
+    if (newSchedule.installationId) {
+      setInstallations((prev) => prev.map((installation) => installation.id === newSchedule.installationId
+        ? { ...installation, scheduleId: newSchedule.id, startDate: newSchedule.date }
+        : installation));
+    }
     showToast('Jadwal Berhasil Ditambahkan', `${newSchedule.type} - ${newSchedule.customerName}`, 'success');
   };
 
   const updateSchedule = (id: string, data: Partial<Schedule>) => {
+    const existingSchedule = schedules.find((schedule) => schedule.id === id);
+    const updatedSchedule = existingSchedule ? { ...existingSchedule, ...data } : undefined;
+    if (updatedSchedule?.surveyId && schedules.some((schedule) => schedule.id !== id && schedule.surveyId === updatedSchedule.surveyId)) {
+      showToast('Jadwal Ditolak', 'Survey tersebut sudah memiliki jadwal lain.', 'error');
+      return;
+    }
+    if (updatedSchedule?.installationId && schedules.some((schedule) => schedule.id !== id && schedule.installationId === updatedSchedule.installationId)) {
+      showToast('Jadwal Ditolak', 'Pemasangan tersebut sudah memiliki jadwal lain.', 'error');
+      return;
+    }
     setSchedules((prev) => prev.map((s) => (s.id === id ? { ...s, ...data } : s)));
+    if (existingSchedule?.surveyId && existingSchedule.surveyId !== updatedSchedule?.surveyId) {
+      setSurveys((prev) => prev.map((survey) => survey.id === existingSchedule.surveyId
+        ? { ...survey, scheduleId: undefined }
+        : survey));
+    }
+    if (existingSchedule?.installationId && existingSchedule.installationId !== updatedSchedule?.installationId) {
+      setInstallations((prev) => prev.map((installation) => installation.id === existingSchedule.installationId
+        ? { ...installation, scheduleId: undefined }
+        : installation));
+    }
+    if (updatedSchedule?.surveyId) {
+      setSurveys((prev) => prev.map((survey) => survey.id === updatedSchedule.surveyId
+        ? { ...survey, scheduleId: updatedSchedule.id, date: updatedSchedule.date, time: updatedSchedule.time }
+        : survey));
+    }
+    if (updatedSchedule?.installationId) {
+      setInstallations((prev) => prev.map((installation) => installation.id === updatedSchedule.installationId
+        ? { ...installation, scheduleId: updatedSchedule.id, startDate: updatedSchedule.date }
+        : installation));
+    }
     showToast('Jadwal Diperbarui', undefined, 'success');
   };
 
   const deleteSchedule = (id: string) => {
+    const deletedSchedule = schedules.find((schedule) => schedule.id === id);
     setSchedules((prev) => prev.filter((s) => s.id !== id));
+    if (deletedSchedule?.surveyId) {
+      setSurveys((prev) => prev.map((survey) => survey.id === deletedSchedule.surveyId
+        ? { ...survey, scheduleId: undefined }
+        : survey));
+    }
+    if (deletedSchedule?.installationId) {
+      setInstallations((prev) => prev.map((installation) => installation.id === deletedSchedule.installationId
+        ? { ...installation, scheduleId: undefined }
+        : installation));
+    }
     showToast('Jadwal Dihapus', undefined, 'info');
   };
 
@@ -439,13 +559,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       ...surveyData,
       id: newId,
       measurements: surveyData.measurements || [],
+      technicianIds: surveyData.technicianIds?.length ? surveyData.technicianIds : [surveyData.technicianId],
+      technicianNames: surveyData.technicianNames?.length ? surveyData.technicianNames : [surveyData.technicianName],
     };
     setSurveys((prev) => [newSurvey, ...prev]);
     showToast('Survey Ditambahkan', `${newSurvey.customerName} (${newSurvey.time})`, 'success');
   };
 
   const updateSurvey = (id: string, data: Partial<SurveyItem>) => {
-    setSurveys((prev) => prev.map((s) => (s.id === id ? { ...s, ...data } : s)));
+    setSurveys((prev) =>
+      prev.map((s) => (s.id === id ? normalizeSurvey({ ...s, ...data }) : s))
+    );
     showToast('Data Survey Diperbarui', undefined, 'success');
   };
 
@@ -572,12 +696,38 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       ...eqData,
       id: newId,
     };
-    setEquipment((prev) => [newEq, ...prev]);
-    showToast('Alat Berhasil Ditambahkan', `${newEq.name} (${newEq.id})`, 'success');
+    const unitCount = Math.max(1, eqData.unitCount || eqData.units?.length || 1);
+    const units = Array.from({ length: unitCount }, (_, index) =>
+      createEquipmentUnit(newEq, index, eqData.units?.[index])
+    );
+    const summarized = summarizeEquipment(newEq, units);
+    setEquipment((prev) => [summarized, ...prev]);
+    showToast('Alat Berhasil Ditambahkan', `${summarized.name} (${summarized.id})`, 'success');
   };
 
   const updateEquipment = (id: string, data: Partial<Equipment>) => {
-    setEquipment((prev) => prev.map((e) => (e.id === id ? { ...e, ...data } : e)));
+    setEquipment((prev) =>
+      prev.map((item) => {
+        if (item.id !== id) return item;
+        const updated = { ...item, ...data };
+        const existingUnits = item.units || [createEquipmentUnit(item, 0)];
+        const targetCount = Math.max(existingUnits.length, data.unitCount || 0);
+        const units = Array.from({ length: targetCount || 1 }, (_, index) =>
+          existingUnits[index] || createEquipmentUnit(updated, index)
+        );
+        if (data.status && data.status !== item.status && !data.units) {
+          units.forEach((unit) => {
+            if (unit.status !== 'Dipinjam') unit.status = data.status!;
+          });
+        }
+        if (data.condition && data.condition !== item.condition && !data.units) {
+          units.forEach((unit) => {
+            unit.condition = data.condition!;
+          });
+        }
+        return summarizeEquipment(updated, units);
+      })
+    );
     showToast('Data Alat Diperbarui', undefined, 'success');
   };
 
@@ -587,7 +737,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   // Loans CRUD
-  const addLoan = (loanData: Omit<EquipmentLoan, 'id'>) => {
+  const addLoan = (loanData: Omit<EquipmentLoan, 'id'>): boolean => {
+    const selectedEquipment = equipment.find((item) => item.id === loanData.equipmentId);
+    const selectedUnit = selectedEquipment?.units?.find((unit) =>
+      loanData.unitId ? unit.id === loanData.unitId : unit.status === 'Tersedia'
+    );
+    const hasActiveLoan = selectedUnit
+      ? loans.some(
+          (loan) =>
+            loan.unitId === selectedUnit.id &&
+            (loan.status === 'Dipinjam' || loan.status === 'Terlambat')
+        )
+      : false;
+    if (!selectedEquipment || !selectedUnit || selectedUnit.status !== 'Tersedia' || hasActiveLoan) {
+      showToast('Peminjaman Ditolak', 'Unit yang dipilih tidak tersedia.', 'error');
+      return false;
+    }
     const maxNum = loans.reduce((max, l) => {
       const num = parseInt(l.id.replace(/\D/g, ''), 10);
       return !isNaN(num) && num > max ? num : max;
@@ -596,24 +761,33 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const newLoan: EquipmentLoan = {
       ...loanData,
       id: newId,
+      borrowedAt: loanData.borrowedAt || new Date().toISOString(),
+      unitId: selectedUnit.id,
+      unitCode: selectedUnit.code,
+      equipmentCode: selectedEquipment.code,
     };
     setLoans((prev) => [newLoan, ...prev]);
 
-    // Update equipment status
     setEquipment((prev) =>
       prev.map((e) =>
         e.id === loanData.equipmentId
-          ? {
-              ...e,
-              status: 'Dipinjam',
-              currentBorrower: loanData.borrowerName,
-              currentBorrowerId: loanData.technicianId,
-            }
+          ? summarizeEquipment(e, (e.units || []).map((unit) =>
+              unit.id === selectedUnit.id
+                ? {
+                    ...unit,
+                    status: 'Dipinjam',
+                    currentBorrower: loanData.borrowerName,
+                    currentBorrowerId: loanData.technicianId,
+                    lastBorrowDate: loanData.borrowDate,
+                  }
+                : unit
+            ))
           : e
       )
     );
 
     showToast('Peminjaman Dicatat', `${newLoan.equipmentName} untuk ${newLoan.borrowerName}`, 'success');
+    return true;
   };
 
   const updateLoan = (id: string, data: Partial<EquipmentLoan>) => {
@@ -656,6 +830,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               ...l,
               status: 'Dikembalikan',
               actualReturnDate: actualDate,
+              returnedAt: new Date(`${actualDate}T00:00:00`).toISOString(),
               returnCondition: finalCondition,
               notes: notes || l.notes,
             }
@@ -663,17 +838,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       )
     );
 
-    // Update equipment status
     setEquipment((prev) =>
       prev.map((e) =>
         e.id === loan.equipmentId
-          ? {
-              ...e,
-              status: finalCondition === 'Perlu Servis' ? 'Maintenance' : 'Tersedia',
-              condition: finalCondition,
-              currentBorrower: undefined,
-              currentBorrowerId: undefined,
-            }
+          ? summarizeEquipment(e, (e.units || []).map((unit) =>
+              unit.id === loan.unitId || (!loan.unitId && unit.status === 'Dipinjam')
+                ? {
+                    ...unit,
+                    status: finalCondition === 'Perlu Servis' ? 'Maintenance' : 'Tersedia',
+                    condition: finalCondition,
+                    currentBorrower: undefined,
+                    currentBorrowerId: undefined,
+                    lastReturnDate: actualDate,
+                  }
+                : unit
+            ))
           : e
       )
     );
