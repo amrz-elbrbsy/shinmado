@@ -60,8 +60,8 @@ export const Badge: React.FC<BadgeProps> = ({
   };
 
   const sizeStyles = {
-    sm: 'text-[11px] sm:text-xs px-2.5 py-0.5 font-semibold rounded-md gap-1.5 whitespace-nowrap tracking-tight',
-    md: 'text-xs sm:text-[13px] px-3 py-1 font-semibold rounded-lg gap-1.5 whitespace-nowrap tracking-tight',
+    sm: 'text-xs px-2.5 py-1 font-semibold rounded-md gap-1.5 whitespace-nowrap tracking-tight',
+    md: 'text-sm px-3 py-1 font-semibold rounded-lg gap-1.5 whitespace-nowrap tracking-tight',
   };
 
   return (

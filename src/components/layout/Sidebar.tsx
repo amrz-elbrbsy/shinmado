@@ -152,10 +152,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ onItemClick, className = '' })
 
   return (
     <aside
-      className={`w-[260px] h-full flex flex-col bg-white border-r border-[#E6EDF8] select-none ${className}`}
+      className={`w-[272px] h-full flex flex-col bg-[#0B2546] border-r border-[#173B65] select-none ${className}`}
     >
       {/* Brand Header */}
-      <div className="py-5 px-6 border-b border-slate-100 flex flex-col justify-center">
+      <div className="py-6 px-6 border-b border-white/10 flex flex-col justify-center">
         <BrandLogo size="md" />
       </div>
 
@@ -163,7 +163,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onItemClick, className = '' })
       <div className="flex-1 overflow-y-auto px-3.5 py-4 space-y-4 scrollbar-thin">
         {navGroups.map((group, groupIdx) => (
           <div key={groupIdx}>
-            <h5 className="px-3 mb-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+            <h5 className="px-3 mb-1.5 text-[11px] font-bold text-blue-200/60 uppercase tracking-widest">
               {group.title}
             </h5>
             <div className="space-y-0.5">
@@ -176,12 +176,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ onItemClick, className = '' })
                     onClick={() => handleNavClick(item.id)}
                     className={`w-full flex items-center justify-between px-3.5 py-2.5 text-[13px] rounded-xl transition-all duration-150 cursor-pointer ${
                       isActive
-                        ? 'bg-[#FAF2DF] text-[#8C6207] font-semibold'
-                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 font-medium'
+                          ? 'bg-[#D6A83A] text-[#10233F] font-bold shadow-sm'
+                          : 'text-blue-100/75 hover:text-white hover:bg-white/10 font-medium'
                     }`}
                   >
                     <div className="flex items-center gap-3 min-w-0">
-                      <span className={isActive ? 'text-[#B88710]' : 'text-slate-400'}>
+                      <span className={isActive ? 'text-[#10233F]' : 'text-blue-200/60'}>
                         {item.icon}
                       </span>
                       <span className="truncate tracking-tight">{item.label}</span>
@@ -209,16 +209,16 @@ export const Sidebar: React.FC<SidebarProps> = ({ onItemClick, className = '' })
       </div>
 
       {/* Footer Sidebar: Admin Profile, Supabase Status & Logout */}
-      <div className="p-3.5 border-t border-slate-100 space-y-2 bg-white">
+      <div className="p-3.5 border-t border-white/10 space-y-2 bg-[#09203D]">
         {/* Supabase Status Pill */}
-        <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-slate-50/80 border border-slate-200/60 text-[11px]">
+        <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-xs">
           <div className="flex items-center gap-2">
             <span
               className={`w-2 h-2 rounded-full ${
                 supabaseStatus.isConnected ? 'bg-emerald-500' : 'bg-emerald-500 animate-pulse'
               }`}
             />
-            <span className="font-semibold text-slate-700">Supabase</span>
+            <span className="font-semibold text-blue-100">Supabase</span>
           </div>
           <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-full">
             Connected

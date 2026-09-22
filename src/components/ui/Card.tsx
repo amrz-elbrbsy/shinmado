@@ -22,18 +22,18 @@ export const Card: React.FC<CardProps> = ({
 }) => {
   const paddingMap = {
     none: 'p-0',
-    sm: 'p-3 sm:p-3.5',
-    md: 'p-3.5 sm:p-4.5',
-    lg: 'p-4 sm:p-6',
+    sm: 'p-3 sm:p-4',
+    md: 'p-4 sm:p-5',
+    lg: 'p-5 sm:p-6',
   };
 
   return (
     <div
-      className={`bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden transition-all duration-200 ${className}`}
+      className={`bg-white rounded-xl border border-[#DCE5EF] shadow-[0_4px_16px_rgba(11,37,70,0.045)] overflow-hidden transition-all duration-200 ${className}`}
       {...props}
     >
       {(title || action) && (
-        <div className="px-4 sm:px-5 py-3 sm:py-3.5 border-b border-slate-100 flex flex-wrap sm:flex-nowrap items-start sm:items-center justify-between gap-2.5">
+        <div className="px-4 sm:px-5 py-3.5 border-b border-[#E7EEF5] bg-[#FBFCFE] flex flex-wrap sm:flex-nowrap items-start sm:items-center justify-between gap-3">
           <div className="min-w-0 flex-1">
             {typeof title === 'string' ? (
               <h3 className="text-clamp-h3 font-bold text-slate-900 tracking-tight">

@@ -22,6 +22,7 @@ import {
   ExternalLink,
   AlertTriangle,
   Server,
+  X,
 } from 'lucide-react';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
@@ -33,7 +34,7 @@ import { useApp } from '../../context/AppContext';
 import { testSupabaseConnection } from '../../lib/supabase';
 
 export const SettingsPage: React.FC = () => {
-  const { currentUser, updateCurrentUser, showToast, supabaseStatus } = useApp();
+  const { currentUser, updateCurrentUser, showToast, supabaseStatus, managedUsers, refreshManagedUsers, createManagedUser } = useApp();
 
   const [activeTab, setActiveTab] = useState<'profile' | 'supabase' | 'company' | 'operational' | 'users'>(
     'profile'
@@ -87,30 +88,25 @@ export const SettingsPage: React.FC = () => {
     autoRemindReturnDays: 1,
   });
 
-  // 5. Manajemen User
-  const [usersList, setUsersList] = useState([
-    {
-      id: 'USR-01',
-      name: 'Muhammad Amrizal',
-      email: 'mamrizal953@gmail.com',
-      role: 'Administrator',
-      status: 'Aktif',
-    },
-    {
-      id: 'USR-02',
-      name: 'Rian Pratama',
-      email: 'rian.koordinator@shinmado.co.id',
-      role: 'Koordinator Lapangan',
-      status: 'Aktif',
-    },
-    {
-      id: 'USR-03',
-      name: 'Siti Rahma',
-      email: 'siti.viewer@shinmado.co.id',
-      role: 'Viewer / Sales Monitor',
-      status: 'Aktif',
-    },
-  ]);
+  const [isUserModalOpen, setIsUserModalOpen] = useState(false);
+  const [newUser, setNewUser] = useState({ name: '', email: '', password: '', role: 'TEKNISI' });
+
+  React.useEffect(() => {
+    if (activeTab === 'users') refreshManagedUsers();
+  }, [activeTab]);
+
+  const handleCreateUser = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!newUser.name || !newUser.email || newUser.password.length < 6) {
+      showToast('Data User Belum Lengkap', 'Password minimal 6 karakter.', 'error');
+      return;
+    }
+    const created = await createManagedUser(newUser);
+    if (created) {
+      setNewUser({ name: '', email: '', password: '', role: 'TEKNISI' });
+      setIsUserModalOpen(false);
+    }
+  };
 
   const handleSaveProfile = (e: React.FormEvent) => {
     e.preventDefault();
@@ -582,7 +578,7 @@ CREATE TABLE IF NOT EXISTS public.technicians (
           title="Manajemen Pengguna Sistem"
           subtitle="Daftar administrator, koordinator, dan staf dengan akses ke ZIPBLIND"
           action={
-            <Button size="sm" variant="primary" leftIcon={<Plus className="w-4 h-4" />}>
+            <Button size="sm" variant="primary" leftIcon={<Plus className="w-4 h-4" />} onClick={() => setIsUserModalOpen(true)}>
               + Tambah User
             </Button>
           }
@@ -599,7 +595,9 @@ CREATE TABLE IF NOT EXISTS public.technicians (
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {usersList.map((user) => (
+                {managedUsers.length === 0 ? (
+                  <tr><td colSpan={5} className="p-8 text-center text-slate-400">Belum ada profil user di Supabase.</td></tr>
+                ) : managedUsers.map((user) => (
                   <tr key={user.id} className="hover:bg-slate-50">
                     <td className="p-3 font-bold text-[#111827] flex items-center gap-2">
                       <Avatar name={user.name} size="sm" />
@@ -613,7 +611,7 @@ CREATE TABLE IF NOT EXISTS public.technicians (
                     </td>
                     <td className="p-3">
                       <span className="text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-full">
-                        {user.status}
+                        Aktif
                       </span>
                     </td>
                     <td className="p-3 text-right">
@@ -625,6 +623,24 @@ CREATE TABLE IF NOT EXISTS public.technicians (
             </table>
           </div>
         </Card>
+      )}
+
+      {isUserModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+          <div className="w-full max-w-lg rounded-xl bg-white shadow-2xl border border-slate-200 p-6">
+            <div className="flex items-center justify-between mb-5">
+              <div><h3 className="text-lg font-bold text-slate-900">Tambah User</h3><p className="text-sm text-slate-500">Akun dibuat melalui Supabase Authentication.</p></div>
+              <button type="button" onClick={() => setIsUserModalOpen(false)} className="p-2 text-slate-400 hover:text-slate-700"><X className="w-4 h-4" /></button>
+            </div>
+            <form onSubmit={handleCreateUser} className="space-y-4">
+              <Input label="Nama" value={newUser.name} onChange={(e) => setNewUser({ ...newUser, name: e.target.value })} required />
+              <Input label="Email" type="email" value={newUser.email} onChange={(e) => setNewUser({ ...newUser, email: e.target.value })} required />
+              <Input label="Password sementara" type="password" value={newUser.password} onChange={(e) => setNewUser({ ...newUser, password: e.target.value })} minLength={6} required helperText="Password hanya dikirim ke Supabase Auth dan tidak disimpan sebagai plaintext." />
+              <div><label className="block text-sm font-semibold text-slate-700 mb-1.5">Role</label><select value={newUser.role} onChange={(e) => setNewUser({ ...newUser, role: e.target.value })} className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm"><option value="TEKNISI">Teknisi</option><option value="ADMIN">Administrator</option></select></div>
+              <div className="flex justify-end gap-2"><Button type="button" variant="secondary" onClick={() => setIsUserModalOpen(false)}>Batal</Button><Button type="submit" variant="primary">Buat Akun</Button></div>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   );

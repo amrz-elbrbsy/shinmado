@@ -1,16 +1,17 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap');
 @import "tailwindcss";
 
 @theme {
-  --font-display: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --font-body: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --color-brand-bg: #F5F6F8;
+  --font-display: 'Manrope', system-ui, sans-serif;
+  --font-body: 'DM Sans', system-ui, sans-serif;
+  --color-brand-bg: #F3F6FA;
   --color-brand-surface: #FFFFFF;
-  --color-brand-primary: #0F172A;
-  --color-brand-navy: #111827;
-  --color-brand-blue: #2563EB;
-  --color-brand-blue-light: #EFF6FF;
-  --color-brand-border: #E5E7EB;
-  --color-brand-text-primary: #111827;
+  --color-brand-primary: #0B2546;
+  --color-brand-navy: #0B2546;
+  --color-brand-blue: #2C6EAA;
+  --color-brand-blue-light: #EAF3FB;
+  --color-brand-border: #DCE5EF;
+  --color-brand-text-primary: #10233F;
   --color-brand-text-secondary: #64748B;
 }
 
@@ -24,18 +25,18 @@
   }
 
   body {
-    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    color: #111827;
-    background-color: #F5F6F8;
-    line-height: 1.6;
-    letter-spacing: -0.012em;
+    font-family: 'DM Sans', system-ui, sans-serif;
+    color: #10233F;
+    background-color: #F3F6FA;
+    line-height: 1.55;
+    letter-spacing: 0;
   }
 
   /* Headings with tight, professional letter spacing */
   h1, h2, h3, h4, h5, h6 {
-    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
-    letter-spacing: -0.025em;
-    color: #111827;
+    font-family: 'Manrope', system-ui, sans-serif;
+    letter-spacing: 0;
+    color: #10233F;
   }
 
   p {
@@ -45,37 +46,37 @@
 
 /* Typography Hierarchy System (Section D) */
 .text-page-title {
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: 'Manrope', sans-serif;
   font-size: clamp(1.625rem, 1.35rem + 1.25vw, 2.25rem); /* 26px - 36px */
   line-height: 1.15;
-  letter-spacing: -0.035em;
+  letter-spacing: 0;
   font-weight: 800;
   color: #111827;
 }
 
 .text-section-title {
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: 'Manrope', sans-serif;
   font-size: clamp(1.125rem, 1.05rem + 0.5vw, 1.375rem); /* 18px - 22px */
   line-height: 1.25;
-  letter-spacing: -0.025em;
+  letter-spacing: 0;
   font-weight: 700;
   color: #111827;
 }
 
 .text-card-title {
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: 'Manrope', sans-serif;
   font-size: 1.05rem; /* 16-17px */
   line-height: 1.3;
-  letter-spacing: -0.02em;
+  letter-spacing: 0;
   font-weight: 700;
   color: #111827;
 }
 
 .text-kpi {
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: 'Manrope', sans-serif;
   font-size: clamp(1.85rem, 1.5rem + 1.5vw, 2.625rem); /* 30px - 42px */
   line-height: 1.05;
-  letter-spacing: -0.035em;
+  letter-spacing: 0;
   font-weight: 800;
 }
 
@@ -127,9 +128,9 @@
 /* SaaS Card styles inspired by visual reference */
 .saas-card {
   background-color: #FFFFFF;
-  border-radius: 1.25rem; /* 20px */
-  border: 1px solid #E5E7EB;
-  box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.04), 0 1px 2px -1px rgba(15, 23, 42, 0.03);
+  border-radius: 0.875rem;
+  border: 1px solid #DCE5EF;
+  box-shadow: 0 4px 16px rgba(11, 37, 70, 0.045);
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -165,4 +166,23 @@
 }
 ::-webkit-scrollbar-thumb:hover {
   background: #94A3B8;
+}
+
+/* Global density and readability pass for the existing Tailwind surfaces. */
+button, input, select, textarea { font-family: inherit; }
+input, select, textarea { font-size: 0.875rem; }
+table { font-size: 0.8125rem; }
+th { letter-spacing: 0.045em; }
+
+@media (min-width: 1280px) {
+  main { max-width: 1680px; }
+}
+
+@media (max-width: 640px) {
+  main { padding-left: 1rem !important; padding-right: 1rem !important; }
+}
+
+@layer utilities {
+  .text-\[10px\] { font-size: 0.6875rem; line-height: 1rem; }
+  .text-\[11px\] { font-size: 0.75rem; line-height: 1.1rem; }
 }

@@ -29,13 +29,13 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
   ];
 
   return (
-    <div className="min-h-screen bg-[#F4F7FC] flex flex-col antialiased text-slate-800">
+    <div className="min-h-screen bg-[#F3F6FA] flex flex-col antialiased text-[#10233F]">
       {/* Toast notifications container */}
       <ToastContainer />
 
       <div className="flex flex-1 min-h-screen">
         {/* DESKTOP SIDEBAR (Fixed 260px) */}
-        <div className="hidden lg:block lg:w-[260px] shrink-0 h-screen sticky top-0 z-40">
+        <div className="hidden lg:block lg:w-[272px] shrink-0 h-screen sticky top-0 z-40">
           <Sidebar />
         </div>
 
@@ -68,14 +68,14 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
           <Topbar onMenuToggle={() => setIsMobileSidebarOpen(true)} />
 
           {/* PAGE CONTENT CONTAINER */}
-          <main className="flex-1 w-full px-6 lg:px-8 py-6 min-w-0">
+          <main className="flex-1 w-full px-5 lg:px-8 xl:px-10 py-7 min-w-0">
             {children}
           </main>
         </div>
       </div>
 
       {/* MOBILE BOTTOM NAVIGATION */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200/90 py-1.5 px-2 flex items-center justify-around">
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-[#DCE5EF] py-1.5 px-2 flex items-center justify-around shadow-[0_-6px_20px_rgba(11,37,70,0.06)]">
         {mobileBottomItems.map((item) => {
           const isActive = activePage === item.id;
           return (

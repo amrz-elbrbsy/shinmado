@@ -137,7 +137,7 @@ export const Topbar: React.FC<TopbarProps> = ({ onMenuToggle }) => {
   };
 
   return (
-    <header className="sticky top-0 z-30 h-16 bg-white/95 backdrop-blur-md border-b border-[#E6EDF8] px-6 lg:px-8 flex items-center justify-between gap-4">
+    <header className="sticky top-0 z-30 h-[72px] bg-white/95 backdrop-blur-md border-b border-[#DCE5EF] px-5 lg:px-8 xl:px-10 flex items-center justify-between gap-4 shadow-[0_1px_8px_rgba(11,37,70,0.03)]">
       {/* KIRI: Breadcrumb / Context Page */}
       <div className="flex items-center gap-3 min-w-0">
         <button
