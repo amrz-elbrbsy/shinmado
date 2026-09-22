@@ -125,22 +125,19 @@ export const EquipmentPage: React.FC = () => {
     setIsAddDrawerOpen(true);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name.trim()) return;
 
-    if (editingEquipment) {
-      updateEquipment(editingEquipment.id, formData);
-    } else {
-      addEquipment(formData);
-    }
-    setIsAddDrawerOpen(false);
+    const saved = editingEquipment
+      ? await updateEquipment(editingEquipment.id, formData)
+      : await addEquipment(formData);
+    if (saved) setIsAddDrawerOpen(false);
   };
 
-  const handleDeleteConfirm = () => {
+  const handleDeleteConfirm = async () => {
     if (deletingEquipment) {
-      deleteEquipment(deletingEquipment.id);
-      setDeletingEquipment(null);
+      if (await deleteEquipment(deletingEquipment.id)) setDeletingEquipment(null);
     }
   };
 
@@ -151,11 +148,11 @@ export const EquipmentPage: React.FC = () => {
     setUnitReturnDate('');
   };
 
-  const handleUnitBorrow = (item: Equipment, unitId: string) => {
+  const handleUnitBorrow = async (item: Equipment, unitId: string) => {
     const unit = getUnits(item).find((candidate) => candidate.id === unitId);
     const technician = technicians.find((candidate) => candidate.id === unitBorrowerId);
     if (!unit || unit.status !== 'Tersedia' || !technician) return;
-    const created = addLoan({
+    const created = await addLoan({
       equipmentId: item.id,
       unitId: unit.id,
       unitCode: unit.code,

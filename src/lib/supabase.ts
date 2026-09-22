@@ -1,10 +1,7 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-// Environment variables or local storage configuration
-const ENV_SUPABASE_URL = (import.meta as any).env?.VITE_SUPABASE_URL || '';
-const ENV_SUPABASE_ANON_KEY = (import.meta as any).env?.VITE_SUPABASE_ANON_KEY || '';
-
-const CONFIG_STORAGE_KEY = 'ziplind_supabase_config';
+const ENV_SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || '';
+const ENV_SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
 export interface SupabaseConfig {
   url: string;
@@ -13,36 +10,11 @@ export interface SupabaseConfig {
 }
 
 export function getStoredSupabaseConfig(): SupabaseConfig {
-  try {
-    const stored = localStorage.getItem(CONFIG_STORAGE_KEY);
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      if (parsed.url && parsed.anonKey) {
-        return { ...parsed, isCustom: true };
-      }
-    }
-  } catch (e) {
-    console.error('Failed to read stored Supabase config', e);
-  }
-
   return {
-    url: ENV_SUPABASE_URL || 'https://ziplind-shinmado.supabase.co',
-    anonKey: ENV_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e30.dummy-anon-key',
-    isCustom: Boolean(ENV_SUPABASE_URL && ENV_SUPABASE_ANON_KEY),
+    url: ENV_SUPABASE_URL,
+    anonKey: ENV_SUPABASE_ANON_KEY,
+    isCustom: false,
   };
-}
-
-export function saveStoredSupabaseConfig(url: string, anonKey: string) {
-  try {
-    localStorage.setItem(
-      CONFIG_STORAGE_KEY,
-      JSON.stringify({ url: url.trim(), anonKey: anonKey.trim() })
-    );
-    // Reinitialize
-    initSupabaseClient();
-  } catch (e) {
-    console.error('Failed to save Supabase config', e);
-  }
 }
 
 let supabaseInstance: SupabaseClient | null = null;
@@ -50,6 +22,9 @@ let isConnectedToLiveSupabase = false;
 
 export function initSupabaseClient(): SupabaseClient {
   const config = getStoredSupabaseConfig();
+  if (!config.url || !config.anonKey) {
+    throw new Error('VITE_SUPABASE_URL dan VITE_SUPABASE_ANON_KEY wajib dikonfigurasi.');
+  }
   try {
     supabaseInstance = createClient(config.url, config.anonKey, {
       auth: {
@@ -73,9 +48,7 @@ export function initSupabaseClient(): SupabaseClient {
     return supabaseInstance;
   } catch (error) {
     console.warn('Supabase initialization warning:', error);
-    // Fallback safe client
-    supabaseInstance = createClient('https://fallback.supabase.co', 'fallback-key');
-    return supabaseInstance;
+    throw error;
   }
 }
 

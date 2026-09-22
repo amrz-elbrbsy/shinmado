@@ -84,31 +84,28 @@ export const TechniciansPage: React.FC = () => {
     return Object.keys(errors).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateForm()) return;
 
-    if (editingTech) {
-      updateTechnician(editingTech.id, {
+    const saved = editingTech
+      ? await updateTechnician(editingTech.id, {
         name: formData.name.trim(),
         phone: formData.phone.trim() || undefined,
         status: formData.status,
-      });
-    } else {
-      addTechnician({
+        })
+      : await addTechnician({
         name: formData.name.trim(),
         phone: formData.phone.trim() || undefined,
         status: formData.status,
-      });
-    }
+        });
 
-    setIsAddDrawerOpen(false);
+    if (saved) setIsAddDrawerOpen(false);
   };
 
-  const handleDeleteConfirm = () => {
+  const handleDeleteConfirm = async () => {
     if (deletingTech) {
-      deleteTechnician(deletingTech.id);
-      setDeletingTech(null);
+      if (await deleteTechnician(deletingTech.id)) setDeletingTech(null);
     }
   };
 

@@ -51,16 +51,8 @@ export const SettingsPage: React.FC = () => {
   });
 
   // 2. Supabase Integration State
-  const [supabaseUrl, setSupabaseUrl] = useState(
-    localStorage.getItem('ziplind_custom_supabase_url') ||
-      import.meta.env.VITE_SUPABASE_URL ||
-      ''
-  );
-  const [supabaseKey, setSupabaseKey] = useState(
-    localStorage.getItem('ziplind_custom_supabase_key') ||
-      import.meta.env.VITE_SUPABASE_ANON_KEY ||
-      ''
-  );
+  const [supabaseUrl, setSupabaseUrl] = useState(import.meta.env.VITE_SUPABASE_URL || '');
+  const [supabaseKey, setSupabaseKey] = useState(import.meta.env.VITE_SUPABASE_ANON_KEY || '');
   const [isTestingConnection, setIsTestingConnection] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
 
@@ -119,11 +111,9 @@ export const SettingsPage: React.FC = () => {
 
   const handleSaveSupabaseConfig = (e: React.FormEvent) => {
     e.preventDefault();
-    localStorage.setItem('ziplind_custom_supabase_url', supabaseUrl.trim());
-    localStorage.setItem('ziplind_custom_supabase_key', supabaseKey.trim());
     showToast(
       'Konfigurasi Supabase Disimpan',
-      'Kredensial disimpan. Halaman akan memuat ulang koneksi secara otomatis.',
+      'Konfigurasi deployment dibaca dari environment Vite dan tidak disimpan di browser.',
       'success'
     );
   };

@@ -60,15 +60,15 @@ export const DocumentationPage: React.FC = () => {
     setIsUploadModalOpen(true);
   };
 
-  const handleUploadSubmit = (e: React.FormEvent) => {
+  const handleUploadSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.title.trim()) return;
 
-    addDocumentation({
+    const saved = await addDocumentation({
       ...formData,
     });
 
-    setIsUploadModalOpen(false);
+    if (saved) setIsUploadModalOpen(false);
   };
 
   return (

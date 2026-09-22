@@ -91,7 +91,7 @@ export const InstallationsPage: React.FC = () => {
     setDailyNotesInput(inst.notes || '');
   };
 
-  const handleSaveProgress = (e: React.FormEvent) => {
+  const handleSaveProgress = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!progressModalInstall) return;
 
@@ -99,18 +99,20 @@ export const InstallationsPage: React.FC = () => {
     const newPercentage = Math.round((newCompleted / progressModalInstall.totalSets) * 100);
     const newStatus = newCompleted >= progressModalInstall.totalSets ? 'Selesai' : 'Dalam Proses';
 
-    updateInstallation(progressModalInstall.id, {
+    const saved = await updateInstallation(progressModalInstall.id, {
       completedSets: newCompleted,
       progressPercentage: newPercentage,
       status: newStatus,
       notes: dailyNotesInput,
     });
 
-    setProgressModalInstall(null);
-    showToast(`Progress diperbarui: ${newCompleted}/${progressModalInstall.totalSets} Set (${newPercentage}%)`);
+    if (saved) {
+      setProgressModalInstall(null);
+      showToast(`Progress diperbarui: ${newCompleted}/${progressModalInstall.totalSets} Set (${newPercentage}%)`);
+    }
   };
 
-  const handleSaveForm = (e: React.FormEvent) => {
+  const handleSaveForm = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!projectName || !location) {
       showToast('Harap isi nama proyek dan alamat lokasi', undefined, 'error');
@@ -121,8 +123,8 @@ export const InstallationsPage: React.FC = () => {
     const techObj = technicians.find((t) => t.name === technicianName);
     const parsedTeam = teamMembers.split(',').map((t) => t.trim()).filter(Boolean);
 
-    if (editingInstallId) {
-      updateInstallation(editingInstallId, {
+    const saved = editingInstallId
+      ? await updateInstallation(editingInstallId, {
         projectName,
         customerName: customerName || projectName,
         location,
@@ -136,9 +138,8 @@ export const InstallationsPage: React.FC = () => {
         progressPercentage: percentage,
         status,
         notes,
-      });
-    } else {
-      addInstallation({
+        })
+      : await addInstallation({
         projectName,
         customerName: customerName || projectName,
         location,
@@ -152,10 +153,9 @@ export const InstallationsPage: React.FC = () => {
         progressPercentage: percentage,
         status,
         notes,
-      });
-    }
+        });
 
-    setIsModalOpen(false);
+    if (saved) setIsModalOpen(false);
   };
 
   const filteredInstallations = installations.filter((item) => {
