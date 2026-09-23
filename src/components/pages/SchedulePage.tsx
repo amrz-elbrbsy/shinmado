@@ -200,8 +200,8 @@ export const SchedulePage: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.customerName || !formData.location) return;
-    if (!editingSchedule && formData.type === 'Survey' && !formData.surveyId) return;
-    if (!editingSchedule && formData.type === 'Pemasangan' && !formData.installationId) return;
+    if (formData.type === 'Survey' && !surveys.some((survey) => survey.id === formData.surveyId)) return;
+    if (formData.type === 'Pemasangan' && !installations.some((installation) => installation.id === formData.installationId)) return;
 
     const saved = editingSchedule
       ? await updateSchedule(editingSchedule.id, formData)
@@ -813,7 +813,7 @@ export const SchedulePage: React.FC = () => {
                 <select
                   value={formData.surveyId}
                   onChange={(e) => applySurveyToSchedule(e.target.value)}
-                  required={!editingSchedule}
+                  required
                   className="w-full text-xs bg-white text-slate-800 rounded-xl border border-slate-200 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#B88710]/20 focus:border-[#B88710]"
                 >
                   <option value="">{editingSchedule && !formData.surveyId ? 'Jadwal lama tanpa relasi' : 'Pilih Survey yang sudah ada'}</option>
@@ -833,7 +833,7 @@ export const SchedulePage: React.FC = () => {
                 <select
                   value={formData.installationId}
                   onChange={(e) => applyInstallationToSchedule(e.target.value)}
-                  required={!editingSchedule}
+                  required
                   className="w-full text-xs bg-white text-slate-800 rounded-xl border border-slate-200 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#B88710]/20 focus:border-[#B88710]"
                 >
                   <option value="">{editingSchedule && !formData.installationId ? 'Jadwal lama tanpa relasi' : 'Pilih Pemasangan yang sudah ada'}</option>

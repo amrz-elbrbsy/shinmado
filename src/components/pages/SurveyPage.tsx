@@ -27,6 +27,8 @@ export const SurveyPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [filterSales, setFilterSales] = useState<string>('all');
+  const [filterStartDate, setFilterStartDate] = useState('');
+  const [filterEndDate, setFilterEndDate] = useState('');
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingSurveyId, setEditingSurveyId] = useState<string | null>(null);
@@ -200,19 +202,33 @@ export const SurveyPage: React.FC = () => {
   };
 
   const filteredSurveys = surveys.filter((s) => {
+    const customerName = s.customerName || '';
+    const location = s.location || '';
+    const technicianName = s.technicianName || '';
+    const sales = s.sales || '';
     const matchesSearch =
-      s.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      s.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      s.technicianName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      s.sales.toLowerCase().includes(searchQuery.toLowerCase());
+      customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      location.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      technicianName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      sales.toLowerCase().includes(searchQuery.toLowerCase());
 
     const matchesStatus = filterStatus === 'all' || s.status === filterStatus;
-    const matchesSales = filterSales === 'all' || s.sales === filterSales;
+    const matchesSales = filterSales === 'all' || sales === filterSales;
+    const surveyDate = s.date || '';
+    const matchesStartDate = !filterStartDate || surveyDate >= filterStartDate;
+    const matchesEndDate = !filterEndDate || surveyDate <= filterEndDate;
 
-    return matchesSearch && matchesStatus && matchesSales;
+    return matchesSearch && matchesStatus && matchesSales && matchesStartDate && matchesEndDate;
   });
   const salesOptions = Array.from(new Set(surveys.map((survey) => survey.sales).filter(Boolean)));
   const getSurveySchedule = (survey: SurveyItem) => schedules.find((schedule) => schedule.surveyId === survey.id);
+  const resetFilters = () => {
+    setSearchQuery('');
+    setFilterStatus('all');
+    setFilterSales('all');
+    setFilterStartDate('');
+    setFilterEndDate('');
+  };
 
   const totalSurveys = surveys.length;
   const scheduledCount = surveys.filter((s) => s.status === 'Terjadwal').length;
@@ -297,7 +313,7 @@ export const SurveyPage: React.FC = () => {
 
       {/* Filter & Search Bar */}
       <div className="bg-white rounded-2xl border border-slate-200/80 p-4 shadow-xs">
-        <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+        <div className="flex flex-col gap-3">
           <div className="relative flex-1">
             <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
@@ -309,7 +325,7 @@ export const SurveyPage: React.FC = () => {
             />
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <div className="flex items-center gap-1.5 text-xs text-slate-500 font-bold">
               <Filter className="w-3.5 h-3.5" />
               <span>Status:</span>
@@ -336,6 +352,24 @@ export const SurveyPage: React.FC = () => {
                 <option key={salesName} value={salesName}>{salesName}</option>
               ))}
             </select>
+
+            <label className="text-xs font-bold text-slate-500">Tanggal Mulai</label>
+            <input
+              type="date"
+              value={filterStartDate}
+              onChange={(e) => setFilterStartDate(e.target.value)}
+              className="text-xs font-semibold rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#B88710]/20 focus:border-[#B88710]"
+            />
+            <label className="text-xs font-bold text-slate-500">Tanggal Akhir</label>
+            <input
+              type="date"
+              value={filterEndDate}
+              onChange={(e) => setFilterEndDate(e.target.value)}
+              className="text-xs font-semibold rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#B88710]/20 focus:border-[#B88710]"
+            />
+            <Button type="button" variant="secondary" size="sm" onClick={resetFilters}>
+              Reset Filter
+            </Button>
           </div>
         </div>
       </div>

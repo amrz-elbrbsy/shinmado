@@ -30,6 +30,8 @@ export const InstallationsPage: React.FC = () => {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [filterStartDate, setFilterStartDate] = useState('');
+  const [filterEndDate, setFilterEndDate] = useState('');
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingInstallId, setEditingInstallId] = useState<string | null>(null);
@@ -159,15 +161,28 @@ export const InstallationsPage: React.FC = () => {
   };
 
   const filteredInstallations = installations.filter((item) => {
+    const projectName = item.projectName || '';
+    const customerName = item.customerName || '';
+    const location = item.location || '';
+    const technicianName = item.technicianName || '';
     const matchesSearch =
-      item.projectName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.technicianName.toLowerCase().includes(searchQuery.toLowerCase());
+      projectName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      location.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      technicianName.toLowerCase().includes(searchQuery.toLowerCase());
 
     const matchesStatus = filterStatus === 'all' || item.status === filterStatus;
-    return matchesSearch && matchesStatus;
+    const scheduledDate = getInstallationSchedule(item)?.date || item.startDate || '';
+    const matchesStartDate = !filterStartDate || scheduledDate >= filterStartDate;
+    const matchesEndDate = !filterEndDate || scheduledDate <= filterEndDate;
+    return matchesSearch && matchesStatus && matchesStartDate && matchesEndDate;
   });
+  const resetFilters = () => {
+    setSearchQuery('');
+    setFilterStatus('all');
+    setFilterStartDate('');
+    setFilterEndDate('');
+  };
 
   const totalProjects = installations.length;
   const inProgressCount = installations.filter((i) => i.status === 'Dalam Proses').length;
@@ -256,7 +271,7 @@ export const InstallationsPage: React.FC = () => {
 
       {/* Filter & Search Bar */}
       <div className="bg-white rounded-2xl border border-slate-200/80 p-4 shadow-xs">
-        <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+        <div className="flex flex-col gap-3">
           <div className="relative flex-1">
             <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
@@ -268,7 +283,7 @@ export const InstallationsPage: React.FC = () => {
             />
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <div className="flex items-center gap-1.5 text-xs text-slate-500 font-bold">
               <Filter className="w-3.5 h-3.5" />
               <span>Status:</span>
@@ -284,6 +299,23 @@ export const InstallationsPage: React.FC = () => {
               <option value="Selesai">Selesai</option>
               <option value="Tertunda">Tertunda</option>
             </select>
+            <label className="text-xs font-bold text-slate-500">Tanggal Mulai</label>
+            <input
+              type="date"
+              value={filterStartDate}
+              onChange={(e) => setFilterStartDate(e.target.value)}
+              className="text-xs font-semibold rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#B88710]/20 focus:border-[#B88710]"
+            />
+            <label className="text-xs font-bold text-slate-500">Tanggal Akhir</label>
+            <input
+              type="date"
+              value={filterEndDate}
+              onChange={(e) => setFilterEndDate(e.target.value)}
+              className="text-xs font-semibold rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#B88710]/20 focus:border-[#B88710]"
+            />
+            <Button type="button" variant="secondary" size="sm" onClick={resetFilters}>
+              Reset Filter
+            </Button>
           </div>
         </div>
       </div>
