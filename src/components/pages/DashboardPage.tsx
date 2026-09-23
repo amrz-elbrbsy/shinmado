@@ -81,7 +81,35 @@ export const DashboardPage: React.FC = () => {
   const todayInstallationsCount = installations.filter(
     (installation) => installation.startDate === today
   ).length;
-  const todaySchedules = schedules.filter((schedule) => schedule.date === today);
+  //const todaySchedules = schedules.filter((schedule) => schedule.date === today);
+  const todaySchedules = [
+  ...surveys
+    .filter((survey) => survey.date === today)
+    .map((survey) => ({
+      id: survey.id,
+      date: survey.date,
+      time: survey.time || '--:--',
+      type: 'Survey' as const,
+      customerName: survey.customerName,
+      location: survey.location,
+      technicianName: survey.technicianName || '-',
+      status: survey.status,
+    })),
+
+  ...installations
+    .filter((installation) => installation.startDate === today)
+    .map((installation) => ({
+      id: installation.id,
+      date: installation.startDate,
+      time: '--:--',
+      type: 'Pemasangan' as const,
+      customerName: installation.customerName || installation.projectName,
+      location: installation.location,
+      technicianName: installation.technicianName || '-',
+      status: installation.status,
+    })),
+].sort((a, b) => a.time.localeCompare(b.time));
+
   const technicianProgress = technicians.filter((technician) => technician.currentTargetPercentage !== undefined);
   const totalTargetSets = targets.reduce((sum, target) => sum + target.targetSets, 0);
   const totalActualSets = targets.reduce((sum, target) => sum + target.actualSets, 0);
