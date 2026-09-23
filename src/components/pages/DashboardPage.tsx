@@ -101,7 +101,7 @@ export const DashboardPage: React.FC = () => {
     .map((installation) => ({
       id: installation.id,
       date: installation.startDate,
-      time: '--:--',
+      time: installation.time || '--:--',
       type: 'Pemasangan' as const,
       customerName: installation.customerName || installation.projectName,
       location: installation.location,
