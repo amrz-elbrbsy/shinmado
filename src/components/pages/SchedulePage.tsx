@@ -145,12 +145,16 @@ export const SchedulePage: React.FC = () => {
 
   // Filtered schedules
   const filteredSchedules = schedules.filter((sch) => {
-    if (activeTab !== 'Semua' && sch.type !== activeTab) return false;
-    if (filterJobType !== 'all' && sch.type !== filterJobType) return false;
-    if (filterTechnician !== 'all' && sch.technicianName !== filterTechnician) return false;
-    if (filterSales !== 'all' && sch.sales !== filterSales) return false;
-    if (filterStatus !== 'all' && sch.status !== filterStatus) return false;
-    return true;
+    // Filter berdasarkan tanggal yang dipilih
+  if (sch.date !== selectedDate) return false;
+
+  if (activeTab !== 'Semua' && sch.type !== activeTab) return false;
+  if (filterJobType !== 'all' && sch.type !== filterJobType) return false;
+  if (filterTechnician !== 'all' && sch.technicianName !== filterTechnician) return false;
+  if (filterSales !== 'all' && sch.sales !== filterSales) return false;
+  if (filterStatus !== 'all' && sch.status !== filterStatus) return false;
+
+  return true;
   });
   const salesOptions = Array.from(new Set(schedules.map((schedule) => schedule.sales).filter(Boolean)));
 
