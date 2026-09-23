@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
-import cuteYetiMascot from '../../assets/images/cute_yeti_mascot_1789974758085.jpg';
+import cuteYetiMascot from '../../assets/images/image.png';
 import zipblindLogoClean from '../../assets/images/zipblind_logo_clean.png';
 
 export const LoginPage: React.FC = () => {
