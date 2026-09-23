@@ -74,9 +74,9 @@ export const LoginPage: React.FC = () => {
           {/* Bold Impact Typography overlaid bottom left */}
           <div className="relative z-10 p-6 sm:p-8 select-none">
             <h2 className="font-black text-white text-3xl sm:text-4xl lg:text-[42px] leading-[1.05] tracking-tight drop-shadow-[0_3px_8px_rgba(0,0,0,0.5)]">
-              EXPLORE.
+              PLAN.
               <br />
-              LEARN. GROW.
+              INSTALL. DELIVER.
             </h2>
             <div className="flex items-center gap-2 mt-2.5 text-white/90 text-xs font-semibold drop-shadow-[0_1px_4px_rgba(0,0,0,0.4)]">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
